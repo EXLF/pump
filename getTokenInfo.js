@@ -140,28 +140,29 @@ async function fetchMetadata(url) {
     if (url.includes('ipfs')) {
         const hash = url.split('/ipfs/')[1];
         
-        // 依次尝试不同的网关
-        for (const gateway of IPFS_GATEWAYS) {
-            try {
-                const response = await axios.get(gateway + hash, {
-                    timeout: 10000,
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    }
-                });
-                return response.data;
-            } catch (error) {
-                console.error(`Gateway ${gateway} failed:`, error.message);
-                continue;  // 尝试下一个网关
-            }
+        // 只尝试 Pinata 网关
+        try {
+            const response = await axios.get(IPFS_GATEWAYS[0] + hash, {
+                timeout: 5000,  // 增加到 5 秒
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error(JSON.stringify({
+                error: 'Failed to fetch metadata from Pinata',
+                url: IPFS_GATEWAYS[0] + hash,
+                message: error.message
+            }, null, 2));
+            return null;  // Pinata 失败就直接返回 null
         }
-        return null;  // 所有网关都失败
     }
     
-    // 非 IPFS URL
+    // 非 IPFS URL 的处理保持不变
     try {
         const response = await axios.get(url, {
-            timeout: 10000,
+            timeout: 30000,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
