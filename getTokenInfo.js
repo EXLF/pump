@@ -131,10 +131,8 @@ async function fetchTokenData() {
 
 // 获取元数据
 const IPFS_GATEWAYS = [
-    'https://ipfs.io/ipfs/',
-    'https://gateway.pinata.cloud/ipfs/',
-    'https://cloudflare-ipfs.com/ipfs/',
-    'https://gateway.ipfs.io/ipfs/'
+    'https://gateway.pinata.cloud/ipfs/',  // Pinata 网关优先
+    'https://ipfs.io/ipfs/'                // IPFS.io 作为备用
 ];
 
 async function fetchMetadata(url) {
