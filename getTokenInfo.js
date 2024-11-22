@@ -130,10 +130,40 @@ async function fetchTokenData() {
 }
 
 // 获取元数据
-async function fetchMetadata(metadataUrl) {
+const IPFS_GATEWAYS = [
+    'https://ipfs.io/ipfs/',
+    'https://gateway.pinata.cloud/ipfs/',
+    'https://cloudflare-ipfs.com/ipfs/',
+    'https://gateway.ipfs.io/ipfs/'
+];
+
+async function fetchMetadata(url) {
+    // 如果是 IPFS URL
+    if (url.includes('ipfs')) {
+        const hash = url.split('/ipfs/')[1];
+        
+        // 依次尝试不同的网关
+        for (const gateway of IPFS_GATEWAYS) {
+            try {
+                const response = await axios.get(gateway + hash, {
+                    timeout: 10000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                return response.data;
+            } catch (error) {
+                console.error(`Gateway ${gateway} failed:`, error.message);
+                continue;  // 尝试下一个网关
+            }
+        }
+        return null;  // 所有网关都失败
+    }
+    
+    // 非 IPFS URL
     try {
-        const response = await axios.get(metadataUrl, {
-            timeout: 5000,
+        const response = await axios.get(url, {
+            timeout: 10000,
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -142,7 +172,7 @@ async function fetchMetadata(metadataUrl) {
     } catch (error) {
         console.error(JSON.stringify({
             error: 'Failed to fetch metadata',
-            url: metadataUrl,
+            url: url,
             message: error.message
         }, null, 2));
         return null;
