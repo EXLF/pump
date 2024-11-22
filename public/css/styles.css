@@ -1,0 +1,30 @@
+/* 消息提示动画 */
+.transition-opacity {
+    transition: opacity 0.3s ease-in-out;
+}
+
+.opacity-0 {
+    opacity: 0;
+}
+
+/* 添加动画效果 */
+.transition-all {
+    transition: all 0.3s ease-in-out;
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* 固定侧边栏 */
+.sticky {
+    position: sticky;
+    top: 1rem;
+} 

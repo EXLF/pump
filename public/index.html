@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solana 代币监控</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="/css/styles.css" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto px-4 py-8">
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Solana 代币监控</h1>
+                <p class="text-gray-600">总数: {{ total }} 个代币</p>
+            </div>
+            <div class="text-sm text-gray-500">
+                最后更新: {{ lastUpdate }}
+            </div>
+        </header>
+
+        <!-- 使用 flex 布局将主内容和右侧重复列表并排 -->
+        <div class="flex gap-6">
+            <!-- 主要内容区域 -->
+            <div class="flex-1">
+                <!-- 标签页 -->
+                <div class="mb-4 border-b border-gray-200">
+                    <ul class="flex flex-wrap -mb-px">
+                        <li class="mr-2">
+                            <button @click="switchTab('all')"
+                                    :class="[
+                                        'inline-block py-2 px-4 text-sm font-medium rounded-t-lg',
+                                        activeTab === 'all' 
+                                            ? 'text-blue-600 border-b-2 border-blue-600' 
+                                            : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
+                                    ]">
+                                所有代币
+                            </button>
+                        </li>
+                        <li class="mr-2">
+                            <button @click="switchTab('duplicates')"
+                                    :class="[
+                                        'inline-block py-2 px-4 text-sm font-medium rounded-t-lg',
+                                        activeTab === 'duplicates'
+                                            ? 'text-blue-600 border-b-2 border-blue-600'
+                                            : 'text-gray-500 hover:text-gray-600 hover:border-gray-300'
+                                    ]">
+                                重复代币
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 加载和错误提示 -->
+                <div class="mb-4">
+                    <div v-if="loading" class="text-center py-4">
+                        <svg class="animate-spin h-5 w-5 mx-auto text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="mt-2 text-gray-600">加载中...</p>
+                    </div>
+
+                    <div v-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                        <strong class="font-bold">错误！</strong>
+                        <span class="block sm:inline">{{ error }}</span>
+                        <button @click="retryFetch" class="ml-4 text-sm underline">重试</button>
+                    </div>
+                </div>
+
+                <!-- 代币列表表格 -->
+                <div v-if="!loading && !error" class="bg-white rounded-lg shadow overflow-hidden">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代币符号</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代币地址</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">社交媒体</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="token in tokens" 
+                                :key="token.mint" 
+                                :class="[
+                                    'hover:bg-gray-50 transition-all duration-200',
+                                    getDuplicateColor(token)
+                                ]">
+                                <!-- 代币符号 -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <img :src="token.metadata?.image" 
+                                                 class="h-10 w-10 rounded-full"
+                                                 @error="handleImageError">
+                                        </div>
+                                        <div class="ml-4">
+                                            <div class="text-sm font-medium text-gray-900">
+                                                {{ token.symbol }}
+                                                <span v-if="token.duplicateType" 
+                                                      :class="getDuplicateTypeClass(token.duplicateType)"
+                                                      class="ml-2 px-2 py-0.5 text-xs rounded-full">
+                                                    {{ getDuplicateTypeText(token.duplicateType) }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <!-- 名称 -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ token.name }}</div>
+                                </td>
+                                
+                                <!-- 代币地址 -->
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <a :href="'https://solscan.io/token/' + token.mint" 
+                                       target="_blank"
+                                       class="text-blue-600 hover:text-blue-900">
+                                        {{ formatAddress(token.mint) }}
+                                    </a>
+                                </td>
+                                
+                                <!-- 创建时间 -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {{ formatTime(token.timestamp) }}
+                                </td>
+
+                                <!-- 社交媒体 -->
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <div class="flex space-x-3">
+                                        <!-- 推特链接 -->
+                                        <a v-if="token.metadata?.twitter" 
+                                           :href="token.metadata.twitter"
+                                           target="_blank"
+                                           :class="[
+                                               'hover:underline flex items-center',
+                                               checkTwitterLink(token.metadata.twitter)
+                                           ]">
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                            </svg>
+                                            推特
+                                        </a>
+
+                                        <!-- 电报链接 -->
+                                        <a v-if="token.metadata?.telegram" 
+                                           :href="token.metadata.telegram"
+                                           target="_blank"
+                                           class="text-blue-500 hover:text-blue-700 flex items-center">
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.28 3.61-1.53 4.36-1.8 4.85-1.81.11 0 .35.03.5.16.13.12.17.28.19.45-.02.07-.02.13-.03.21z"/>
+                                            </svg>
+                                            电报
+                                        </a>
+
+                                        <!-- 网站链接 -->
+                                        <a v-if="token.metadata?.website" 
+                                           :href="token.metadata.website"
+                                           target="_blank"
+                                           class="text-purple-500 hover:text-purple-700 flex items-center">
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                            </svg>
+                                            网站
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分页控件 -->
+                <div class="mt-4 flex justify-center space-x-2">
+                    <button v-for="p in paginationRange" 
+                            :key="p"
+                            @click="p !== '...' && changePage(p)"
+                            :class="[
+                                'px-3 py-1 rounded text-sm',
+                                {
+                                    'bg-blue-500 text-white': currentPage === p,
+                                    'bg-white text-blue-500 hover:bg-blue-100': currentPage !== p && p !== '...',
+                                    'bg-gray-100 text-gray-600 cursor-default': p === '...'
+                                }
+                            ]"
+                            :disabled="p === '...'">
+                        {{ p }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右侧重复代币监控 -->
+            <div class="w-80 flex-shrink-0">
+                <div class="bg-white rounded-lg shadow p-4 sticky top-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">重复代币监控</h2>
+                        <span class="text-xs text-gray-500">
+                            最后检测: {{ formatMonitorTime() }}
+                        </span>
+                    </div>
+
+                    <!-- 重复代币列表 -->
+                    <div class="space-y-4">
+                        <div v-if="duplicateTokens.length === 0" 
+                             class="py-8 text-center text-gray-500">
+                            <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p>暂无重复代币</p>
+                            <p class="text-sm mt-2">持续监控中...</p>
+                        </div>
+
+                        <!-- 使用计算属性显示当前页的代币 -->
+                        <div v-else v-for="group in paginatedDuplicateTokens" 
+                             :key="group.groupNumber"
+                             class="p-4 rounded-lg shadow-sm transition-all duration-200"
+                             :class="getDuplicateColor(group)">
+                            <!-- 代币基本信息 -->
+                            <div class="flex items-center">
+                                <div class="flex items-center flex-1">
+                                    <img :src="group.metadata?.image" 
+                                         :alt="group.symbol"
+                                         class="w-10 h-10 rounded-full"
+                                         @error="handleImageError">
+                                    <div class="ml-3">
+                                        <div class="font-medium text-gray-900">{{ group.symbol }}</div>
+                                    </div>
+                                </div>
+                                <!-- 重复次数 -->
+                                <div class="flex items-center cursor-pointer" 
+                                     @click="showDuplicateGroupTokens(group)">
+                                    <span class="text-sm text-gray-500 mr-1">重复次数:</span>
+                                    <span class="bg-gray-100 text-gray-800 text-sm font-medium px-2.5 py-0.5 rounded-full hover:bg-gray-200 transition-colors">
+                                        {{ group.count }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 时间信息 -->
+                            <div class="mt-3 space-y-2 text-xs text-gray-500">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="font-medium">最新出现：</span>
+                                    <span class="ml-1">{{ formatTime(group.latestTime) }}</span>
+                                </div>
+                                
+                                <div v-if="group.previousTime" class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="font-medium">上次出现：</span>
+                                    <span class="ml-1">{{ formatTime(group.previousTime) }}</span>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="font-medium">首次出现：</span>
+                                    <span class="ml-1">{{ formatTime(group.firstTime) }}</span>
+                                </div>
+                            </div>
+
+                            <!-- 重复类型和推特链接 -->
+                            <div class="mt-2 flex items-center justify-between">
+                                <span class="text-xs px-2 py-1 rounded-full"
+                                      :class="getDuplicateTypeClass(group.type)">
+                                    {{ getDuplicateTypeText(group.type) }}
+                                </span>
+                                
+                                <!-- 添加推特链接按钮 -->
+                                <a v-if="group.hasFullTwitterLink && group.twitterLink"
+                                   :href="group.twitterLink"
+                                   target="_blank"
+                                   class="flex items-center text-xs px-2 py-1 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors duration-200">
+                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                    </svg>
+                                    查看原推文
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- 分页控件 -->
+                        <div v-if="duplicateTokens.length > 0" 
+                             class="mt-4 flex justify-center space-x-1">
+                            <button v-for="p in duplicatePaginationRange" 
+                                    :key="p"
+                                    @click="changeDuplicatePage(p)"
+                                    :class="[
+                                        'px-2 py-1 text-xs rounded',
+                                        {
+                                            'bg-blue-500 text-white': duplicateCurrentPage === p,
+                                            'bg-gray-100 text-gray-600 hover:bg-gray-200': duplicateCurrentPage !== p && p !== '...',
+                                            'bg-gray-50 text-gray-400 cursor-not-allowed': p === '...'
+                                        }
+                                    ]"
+                                    :disabled="p === '...'">
+                                {{ p }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 监控状态指示器 -->
+                    <div class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+                        <span>监控状态</span>
+                        <span class="flex items-center">
+                            <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span>
+                            运行中
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html> 
