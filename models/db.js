@@ -1,21 +1,18 @@
 const mongoose = require('mongoose');
 
-// 简化连接配置
-mongoose.connect('mongodb://localhost:27017/pump_tokens', {
+// 使用环境变量或默认值
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/pump_tokens';
+
+mongoose.connect(MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
 })
 .then(() => {
     console.log('MongoDB连接成功');
-    // 添加测试查询
-    return Token.countDocuments();
-})
-.then(count => {
-    console.log('数据库中的代币数量:', count);
 })
 .catch(err => {
     console.error('MongoDB连接失败:', err);
-    process.exit(1);  // 如果数据库连接失败，终止程序
+    process.exit(1);
 });
 
 // 代币模型
