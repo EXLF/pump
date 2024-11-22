@@ -19,7 +19,9 @@ createApp({
             activeTab: 'all',
             selectedDuplicateGroup: null,
             duplicateGroupTokens: [],
-            selectedGroupSymbol: ''
+            selectedGroupSymbol: '',
+            showCopyMessage: false,
+            copyMessageTimer: null
         }
     },
     methods: {
@@ -204,6 +206,27 @@ createApp({
             } else {
                 document.title = 'Solana 代币监控';
             }
+        },
+
+        async copyAddress(address) {
+            try {
+                await navigator.clipboard.writeText(address);
+                
+                // 清除之前的定时器
+                if (this.copyMessageTimer) {
+                    clearTimeout(this.copyMessageTimer);
+                }
+                
+                // 显示消息
+                this.showCopyMessage = true;
+                
+                // 设置新的定时器
+                this.copyMessageTimer = setTimeout(() => {
+                    this.showCopyMessage = false;
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+            }
         }
     },
     mounted() {
@@ -218,6 +241,9 @@ createApp({
     beforeUnmount() {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
+        }
+        if (this.copyMessageTimer) {
+            clearTimeout(this.copyMessageTimer);
         }
     },
     computed: {
