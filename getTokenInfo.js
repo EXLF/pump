@@ -70,8 +70,21 @@ const rateLimiter = new RateLimiter(30, 60000);
 // 获取并存储代币数据
 async function fetchTokenData() {
     try {
-        await rateLimiter.getToken();
-        const response = await axios.get(API_URL);
+        console.log(JSON.stringify({
+            status: 'fetching',
+            message: '开始获取代币数据',
+            timestamp: new Date().toISOString()
+        }, null, 2));
+
+        const response = await axiosInstance.get(API_URL);
+        
+        console.log(JSON.stringify({
+            status: 'received',
+            message: '成功获取代币数据',
+            count: response.data?.length || 0,
+            timestamp: new Date().toISOString()
+        }, null, 2));
+
         if (response.data.status === 'success') {
             const tokenData = response.data;
             const metadata = await fetchMetadata(tokenData.metadata);
@@ -154,7 +167,13 @@ async function fetchTokenData() {
             }
         }
     } catch (error) {
-        console.error('获取或保存代币数据失败:', error);
+        console.error(JSON.stringify({
+            status: 'error',
+            message: '获取代币数据失败',
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString()
+        }, null, 2));
     }
 }
 
@@ -443,7 +462,6 @@ async function main() {
         message: 'Initializing token check'
     }, null, 2));
     
-    // 先进行初始化检测
     await initializeTokenCheck();
     
     console.log(JSON.stringify({
@@ -451,9 +469,21 @@ async function main() {
         message: 'Starting token monitoring'
     }, null, 2));
     
-    // 然后开始常规监控
     while (true) {
-        await fetchTokenData();
+        try {
+            await fetchTokenData();
+            // 添加 5 秒延时
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        } catch (error) {
+            console.error(JSON.stringify({
+                status: 'error',
+                message: '主循环错误',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            }, null, 2));
+            // 错误后等待 10 秒
+            await new Promise(resolve => setTimeout(resolve, 10000));
+        }
     }
 }
 
