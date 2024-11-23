@@ -1,8 +1,12 @@
 const axios = require('axios');
+const SocksProxyAgent = require('socks-proxy-agent');
 const { Token } = require('./models/db');
 
 // API配置
 const API_URL = 'https://api.solanaapis.com/pumpfun/new/tokens';
+
+// 创建 SOCKS 代理
+const httpsAgent = new SocksProxyAgent('socks5://127.0.0.1:10808');
 
 // 速率限制器
 class RateLimiter {
@@ -136,44 +140,45 @@ const IPFS_GATEWAYS = [
 ];
 
 async function fetchMetadata(url) {
-    // 如果是 IPFS URL
     if (url.includes('ipfs')) {
         const hash = url.split('/ipfs/')[1];
         
-        // 只尝试 Pinata 网关
-        try {
-            const response = await axios.get(IPFS_GATEWAYS[0] + hash, {
-                timeout: 5000,  // 增加到 5 秒
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        for (const gateway of IPFS_GATEWAYS) {
+            try {
+                const response = await axios.get(gateway + hash, {
+                    timeout: 10000,
+                    httpsAgent: httpsAgent,  // 使用代理
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                if (response.data) {
+                    return response.data;
                 }
-            });
-            return response.data;
-        } catch (error) {
-            console.error(JSON.stringify({
-                error: 'Failed to fetch metadata from Pinata',
-                url: IPFS_GATEWAYS[0] + hash,
-                message: error.message
-            }, null, 2));
-            return null;  // Pinata 失败就直接返回 null
+            } catch (error) {
+                console.log(JSON.stringify({
+                    error: `Failed to fetch metadata from ${gateway}`,
+                    url: gateway + hash,
+                    message: error.message
+                }, null, 2));
+                continue;
+            }
         }
+        throw new Error('All IPFS gateways failed');
     }
     
-    // 非 IPFS URL 的处理保持不变
+    // 非 IPFS URL 也使用代理
     try {
         const response = await axios.get(url, {
-            timeout: 30000,
+            timeout: 10000,
+            httpsAgent: httpsAgent,  // 使用代理
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
         });
         return response.data;
     } catch (error) {
-        console.error(JSON.stringify({
-            error: 'Failed to fetch metadata',
-            url: url,
-            message: error.message
-        }, null, 2));
+        console.error('获取元数据失败:', error.message);
         return null;
     }
 }

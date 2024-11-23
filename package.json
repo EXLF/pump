@@ -19,6 +19,7 @@
     "mongoose": "^8.8.2",
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "socks-proxy-agent": "^8.0.2"
   }
 }
