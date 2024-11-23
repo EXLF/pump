@@ -27,7 +27,10 @@ module.exports = {
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
-        MONGODB_URI: 'mongodb://localhost:27017/pump_tokens'
+        MONGODB_URI: 'mongodb://localhost:27017/pump_tokens',
+        http_proxy: 'socks5://127.0.0.1:10808',
+        https_proxy: 'socks5://127.0.0.1:10808',
+        all_proxy: 'socks5://127.0.0.1:10808'
       },
       error_file: 'logs/monitor-err.log',
       out_file: 'logs/monitor-out.log',
