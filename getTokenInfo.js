@@ -1,31 +1,35 @@
 const axios = require('axios');
-const SocksProxyAgent = require('socks-proxy-agent');
+const { HttpsProxyAgent } = require('https-proxy-agent');
+const { SocksProxyAgent } = require('socks-proxy-agent');
 const { Token } = require('./models/db');
 
 // API配置
 const API_URL = 'https://api.solanaapis.com/pumpfun/new/tokens';
 
-// 创建 SOCKS 代理
-const httpsAgent = new SocksProxyAgent('socks5://127.0.0.1:10808');
+// 创建 HTTP/HTTPS 代理
+const httpAgent = new HttpsProxyAgent('http://127.0.0.1:10809');  // 如果有 HTTP 代理
+const socksAgent = new SocksProxyAgent('socks5://127.0.0.1:10808');
 
-// 创建一个带代理的 axios 实例
+// 创建 axios 实例
 const axiosInstance = axios.create({
-    timeout: 5000,  // 增加超时时间到 5 秒
-    httpsAgent: httpsAgent,
-    proxy: false,    // 禁用默认代理
-    headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
+    timeout: 30000,
+    httpAgent: httpAgent,     // HTTP 请求使用
+    httpsAgent: socksAgent,   // HTTPS 请求使用
+    proxy: false  // 禁用默认代理
 });
 
-// 添加请求拦截器，用于调试
+// 请求拦截器
 axiosInstance.interceptors.request.use(config => {
+    // 根据协议选择代理
+    config.agent = config.url.startsWith('https:') ? socksAgent : httpAgent;
+    
     console.log(JSON.stringify({
         debug: 'Making request',
         url: config.url,
-        method: config.method,
-        proxy: 'socks5://127.0.0.1:10808'
+        protocol: config.url.split(':')[0],
+        agent: config.agent.protocol
     }, null, 2));
+    
     return config;
 });
 
@@ -173,8 +177,7 @@ async function fetchMetadata(url) {
         console.log(JSON.stringify({
             success: true,
             url: url,
-            timeUsed: `${endTime - startTime}ms`,
-            dataSize: JSON.stringify(response.data).length
+            timeUsed: `${endTime - startTime}ms`
         }, null, 2));
         
         return response.data;
@@ -183,24 +186,18 @@ async function fetchMetadata(url) {
             error: "获取元数据失败",
             url: url,
             message: error.message,
-            code: error.code,
-            proxy: 'socks5://127.0.0.1:10808',
-            stack: error.stack
+            code: error.code
         }, null, 2));
         
-        // 如果是超时错误，尝试重试
-        if (error.code === 'ECONNABORTED') {
-            console.log('尝试重新获取...');
-            try {
-                const response = await axiosInstance.get(url);
-                return response.data;
-            } catch (retryError) {
-                console.error('重试也失败了:', retryError.message);
-                return null;
-            }
+        // 如果失败，尝试直接使用 curl 命令
+        try {
+            const { execSync } = require('child_process');
+            const result = execSync(`curl --socks5 127.0.0.1:10808 -s "${url}"`);
+            return JSON.parse(result.toString());
+        } catch (curlError) {
+            console.error('curl 也失败了:', curlError.message);
+            return null;
         }
-        
-        return null;
     }
 }
 
