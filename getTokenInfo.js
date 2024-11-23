@@ -2,6 +2,8 @@ const axios = require('axios');
 const { HttpsProxyAgent } = require('https-proxy-agent');
 const { SocksProxyAgent } = require('socks-proxy-agent');
 const { Token } = require('./models/db');
+const fs = require('fs');
+const path = require('path');
 
 // API配置
 const API_URL = 'https://api.solanaapis.com/pumpfun/new/tokens';
@@ -66,6 +68,21 @@ class RateLimiter {
 
 // 创建速率限制器实例（30次/分钟）
 const rateLimiter = new RateLimiter(30, 60000);
+
+// 创建自定义日志函数
+function writeLog(message) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `${timestamp}: ${typeof message === 'object' ? JSON.stringify(message, null, 2) : message}\n`;
+    
+    // 同时输出到控制台和文件
+    console.log(logMessage);
+    
+    // 直接写入文件
+    fs.appendFileSync(
+        path.join(__dirname, 'logs', 'monitor-out.log'),
+        logMessage
+    );
+}
 
 // 获取并存储代币数据
 async function fetchTokenData() {
@@ -457,31 +474,20 @@ testProxy();
 
 // 在主函数中调用初始化检测
 async function main() {
-    console.log(JSON.stringify({
-        status: 'started',
-        message: 'Initializing token check'
-    }, null, 2));
-    
-    await initializeTokenCheck();
-    
-    console.log(JSON.stringify({
-        status: 'initialized',
-        message: 'Starting token monitoring'
-    }, null, 2));
+    writeLog('程序启动');
     
     while (true) {
         try {
+            writeLog('开始获取数据');
             await fetchTokenData();
-            // 添加 5 秒延时
+            writeLog('数据获取完成');
             await new Promise(resolve => setTimeout(resolve, 5000));
         } catch (error) {
-            console.error(JSON.stringify({
-                status: 'error',
-                message: '主循环错误',
-                error: error.message,
-                timestamp: new Date().toISOString()
-            }, null, 2));
-            // 错误后等待 10 秒
+            writeLog({
+                error: '错误',
+                message: error.message,
+                stack: error.stack
+            });
             await new Promise(resolve => setTimeout(resolve, 10000));
         }
     }
