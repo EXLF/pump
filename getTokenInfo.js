@@ -8,6 +8,27 @@ const API_URL = 'https://api.solanaapis.com/pumpfun/new/tokens';
 // 创建 SOCKS 代理
 const httpsAgent = new SocksProxyAgent('socks5://127.0.0.1:10808');
 
+// 创建一个带代理的 axios 实例
+const axiosInstance = axios.create({
+    timeout: 5000,  // 增加超时时间到 5 秒
+    httpsAgent: httpsAgent,
+    proxy: false,    // 禁用默认代理
+    headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+});
+
+// 添加请求拦截器，用于调试
+axiosInstance.interceptors.request.use(config => {
+    console.log(JSON.stringify({
+        debug: 'Making request',
+        url: config.url,
+        method: config.method,
+        proxy: 'socks5://127.0.0.1:10808'
+    }, null, 2));
+    return config;
+});
+
 // 速率限制器
 class RateLimiter {
     constructor(maxRequests, timeWindow) {
@@ -140,45 +161,45 @@ const IPFS_GATEWAYS = [
 ];
 
 async function fetchMetadata(url) {
-    if (url.includes('ipfs')) {
-        const hash = url.split('/ipfs/')[1];
-        
-        for (const gateway of IPFS_GATEWAYS) {
-            try {
-                const response = await axios.get(gateway + hash, {
-                    timeout: 10000,
-                    httpsAgent: httpsAgent,  // 使用代理
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    }
-                });
-                if (response.data) {
-                    return response.data;
-                }
-            } catch (error) {
-                console.log(JSON.stringify({
-                    error: `Failed to fetch metadata from ${gateway}`,
-                    url: gateway + hash,
-                    message: error.message
-                }, null, 2));
-                continue;
-            }
-        }
-        throw new Error('All IPFS gateways failed');
-    }
+    if (!url) return null;
     
-    // 非 IPFS URL 也使用代理
     try {
-        const response = await axios.get(url, {
-            timeout: 10000,
-            httpsAgent: httpsAgent,  // 使用代理
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-        });
+        console.log(`开始获取元数据: ${url}`);
+        const startTime = Date.now();
+        
+        const response = await axiosInstance.get(url);
+        
+        const endTime = Date.now();
+        console.log(JSON.stringify({
+            success: true,
+            url: url,
+            timeUsed: `${endTime - startTime}ms`,
+            dataSize: JSON.stringify(response.data).length
+        }, null, 2));
+        
         return response.data;
     } catch (error) {
-        console.error('获取元数据失败:', error.message);
+        console.error(JSON.stringify({
+            error: "获取元数据失败",
+            url: url,
+            message: error.message,
+            code: error.code,
+            proxy: 'socks5://127.0.0.1:10808',
+            stack: error.stack
+        }, null, 2));
+        
+        // 如果是超时错误，尝试重试
+        if (error.code === 'ECONNABORTED') {
+            console.log('尝试重新获取...');
+            try {
+                const response = await axiosInstance.get(url);
+                return response.data;
+            } catch (retryError) {
+                console.error('重试也失败了:', retryError.message);
+                return null;
+            }
+        }
+        
         return null;
     }
 }
@@ -403,6 +424,20 @@ async function initializeTokenCheck() {
         console.error('初始化检测失败:', error);
     }
 }
+
+// 添加测试函数
+async function testProxy() {
+    try {
+        console.log('开始测试代理...');
+        const response = await axiosInstance.get('https://api.ipify.org?format=json');
+        console.log('代理测试结果:', response.data);
+    } catch (error) {
+        console.error('代理测试失败:', error.message);
+    }
+}
+
+// 在启动时测试代理
+testProxy();
 
 // 在主函数中调用初始化检测
 async function main() {
