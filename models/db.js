@@ -53,4 +53,20 @@ tokenSchema.index({ duplicateGroup: 1 }); // 重复组索引
 
 const Token = mongoose.model('Token', tokenSchema);
 
-module.exports = { Token }; 
+// 推特标签模型
+const twitterLabelSchema = new mongoose.Schema({
+    twitterUrl: { type: String, unique: true },
+    label: String,
+    color: String,
+    timestamp: Date
+}, {
+    timestamps: true
+});
+
+// 添加索引
+twitterLabelSchema.index({ twitterUrl: 1 }, { unique: true });
+twitterLabelSchema.index({ label: 1 });
+
+const TwitterLabel = mongoose.model('TwitterLabel', twitterLabelSchema);
+
+module.exports = { Token, TwitterLabel }; 

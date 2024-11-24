@@ -21,7 +21,14 @@ createApp({
             duplicateGroupTokens: [],
             selectedGroupSymbol: '',
             showCopyMessage: false,
-            copyMessageTimer: null
+            copyMessageTimer: null,
+            twitterLabels: [],
+            newLabel: {
+                twitterUrl: '',
+                label: '',
+                color: '#3B82F6' // 默认蓝色
+            },
+            showLabelForm: false
         }
     },
     methods: {
@@ -53,22 +60,19 @@ createApp({
         },
         
         checkTwitterLink(link) {
-            if (!link) return 'text-gray-500';  // 无链接时的默认颜色
+            if (!link) return 'text-gray-500';
             
             try {
                 const url = link.toLowerCase().trim();
                 
-                // 检查是否是有效的Twitter/X域名
                 if (!url.includes('twitter.com') && !url.includes('x.com')) {
                     return 'text-red-500';  // 无效链接
                 }
                 
-                // 检查是否包含完整推文链接
                 if (url.includes('/status/')) {
                     return 'text-green-500';  // 完整推文链接
                 }
                 
-                // 检查是否只有用户名
                 const urlParts = url.replace('https://', '')
                                    .replace('http://', '')
                                    .replace('twitter.com/', '')
@@ -79,9 +83,9 @@ createApp({
                     return 'text-yellow-500';  // 只有用户名的链接
                 }
                 
-                return 'text-red-500';  // 其他情况视为无效链接
+                return 'text-red-500';
             } catch (error) {
-                return 'text-red-500';  // 解析出错时视为无效链接
+                return 'text-red-500';
             }
         },
         
@@ -212,7 +216,7 @@ createApp({
             try {
                 await navigator.clipboard.writeText(address);
                 
-                // 清除之前的定时器
+                // 清除之前的定器
                 if (this.copyMessageTimer) {
                     clearTimeout(this.copyMessageTimer);
                 }
@@ -220,13 +224,107 @@ createApp({
                 // 显示消息
                 this.showCopyMessage = true;
                 
-                // 设置新的定时器
+                // 设置新定时器
                 this.copyMessageTimer = setTimeout(() => {
                     this.showCopyMessage = false;
                 }, 2000);
             } catch (err) {
                 console.error('复制失败:', err);
             }
+        },
+        
+        async fetchTwitterLabels() {
+            try {
+                const response = await axios.get('/api/twitter-labels');
+                this.twitterLabels = response.data;
+            } catch (error) {
+                console.error('获取推特标签失败:', error);
+            }
+        },
+        
+        async saveTwitterLabel() {
+            try {
+                await axios.post('/api/twitter-labels', this.newLabel);
+                await this.fetchTwitterLabels();
+                this.showLabelForm = false;
+                this.newLabel = {
+                    twitterUrl: '',
+                    label: '',
+                    color: '#3B82F6'
+                };
+            } catch (error) {
+                console.error('保存推特标签失败:', error);
+            }
+        },
+        
+        async deleteTwitterLabel(id) {
+            if (confirm('确定要删除这个标签吗？')) {
+                try {
+                    await axios.delete(`/api/twitter-labels/${id}`);
+                    await this.fetchTwitterLabels();
+                } catch (error) {
+                    console.error('删除推特标签失败:', error);
+                }
+            }
+        },
+        
+        normalizeTwitterUrl(url) {
+            if (!url) return '';
+            return url.replace('@', '')
+                     .replace('https://', '')
+                     .replace('http://', '')
+                     .replace('x.com/', '')
+                     .replace('twitter.com/', '')
+                     .split('/')[0];  // 只保留用户名部分
+        },
+        
+        getTwitterLabel(url) {
+            if (!url) return null;
+            const normalizedUrl = this.normalizeTwitterUrl(url);
+            const label = this.twitterLabels.find(label => 
+                normalizedUrl === this.normalizeTwitterUrl(label.twitterUrl)
+            );
+            return label ? {
+                ...label,
+                // 确保颜色值是有效的
+                color: label.color || '#6366f1' // 默认颜色，以防没有设置
+            } : null;
+        },
+        
+        getTwitterLabelStyle(url) {
+            const label = this.getTwitterLabel(url);
+            if (!label) return null;
+            return {
+                backgroundColor: label.color,
+                color: '#FFFFFF',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                display: 'inline-block',
+                lineHeight: '16px',
+                whiteSpace: 'nowrap'
+            };
+        },
+        
+        processDuplicateGroups() {
+            return this.duplicateGroups.map(group => ({
+                ...group,
+                twitterLink: group.tokens[0]?.metadata?.twitter || null,
+                label: this.getTwitterLabel(group.tokens[0]?.metadata?.twitter)
+            }));
+        },
+        
+        isFullTwitterLink(url) {
+            return url?.toLowerCase().includes('/status/');
+        },
+        
+        isTwitterAccountLink(url) {
+            if (!url) return false;
+            return url.toLowerCase().includes('twitter.com/') || url.toLowerCase().includes('x.com/');
+        },
+        
+        isValidTwitterLink(url) {
+            return this.isFullTwitterLink(url) || this.isTwitterAccountLink(url);
         }
     },
     mounted() {
@@ -237,6 +335,7 @@ createApp({
             this.fetchTokens();
             this.fetchDuplicateTokens();
         }, 2000);
+        this.fetchTwitterLabels();
     },
     beforeUnmount() {
         if (this.refreshInterval) {

@@ -1,5 +1,5 @@
 const express = require('express');
-const { Token } = require('./models/db');
+const { Token, TwitterLabel } = require('./models/db');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 10 }); // 10秒缓存
@@ -10,6 +10,16 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// 添加一个辅助函数来标准化推特URL
+function normalizeTwitterUrl(url) {
+    return url.replace('@', '')
+              .replace('https://', '')
+              .replace('http://', '')
+              .replace('x.com/', '')
+              .replace('twitter.com/', '')
+              .split('/')[0];  // 只保留用户名部分
+}
 
 // 获取代币列表
 app.get('/api/tokens', async (req, res) => {
@@ -159,6 +169,59 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
         res.json(result);
     } catch (error) {
         console.error('获取重复组代币失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 获取所有推特标签
+app.get('/api/twitter-labels', async (req, res) => {
+    try {
+        const labels = await TwitterLabel.find()
+            .sort({ timestamp: -1 })
+            .lean();
+            
+        // 标准化所有标签的URL
+        labels.forEach(label => {
+            label.twitterUrl = normalizeTwitterUrl(label.twitterUrl);
+        });
+            
+        res.json(labels);
+    } catch (error) {
+        console.error('获取推特标签失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 添加或更新推特标签
+app.post('/api/twitter-labels', async (req, res) => {
+    try {
+        const { twitterUrl, label, color } = req.body;
+        
+        const result = await TwitterLabel.findOneAndUpdate(
+            { twitterUrl },
+            { 
+                twitterUrl,
+                label,
+                color,
+                timestamp: new Date()
+            },
+            { upsert: true, new: true }
+        );
+        
+        res.json(result);
+    } catch (error) {
+        console.error('保存推特标签失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 删除推特标签
+app.delete('/api/twitter-labels/:id', async (req, res) => {
+    try {
+        await TwitterLabel.findByIdAndDelete(req.params.id);
+        res.json({ success: true });
+    } catch (error) {
+        console.error('删除推特标签失败:', error);
         res.status(500).json({ error: error.message });
     }
 });
