@@ -144,37 +144,37 @@
                                 <!-- 社交媒体 -->
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center gap-2">
-                                        <!-- 推特链接和标签组合 -->
-                                        <div v-if="token.metadata?.twitter" class="flex items-center gap-1">
-                                            <a :href="token.metadata.twitter"
-                                               target="_blank"
-                                               :class="[
-                                                   'flex items-center hover:opacity-80',
-                                                   {
-                                                       'text-green-500': isFullTwitterLink(token.metadata.twitter),
-                                                       'text-yellow-500': isTwitterAccountLink(token.metadata.twitter),
-                                                       'text-red-500': !isValidTwitterLink(token.metadata.twitter)
-                                                   }
-                                               ]">
-                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                                                </svg>
-                                            </a>
-                                            
-                                            <!-- 推特标签 -->
-                                            <span v-if="getTwitterLabel(token.metadata.twitter)"
-                                                  :style="{
-                                                      backgroundColor: getTwitterLabel(token.metadata.twitter).color,
-                                                      color: '#FFFFFF',
-                                                      padding: '2px 8px',
-                                                      borderRadius: '9999px',
-                                                      fontSize: '0.75rem',
-                                                      lineHeight: '1rem'
-                                                  }"
-                                                  class="inline-flex items-center">
-                                                {{ getTwitterLabel(token.metadata.twitter).label }}
-                                            </span>
-                                        </div>
+                                        <!-- 推特标签（如果存在） -->
+                                        <span v-if="getTwitterLabel(token.metadata?.twitter)"
+                                              :style="{
+                                                  backgroundColor: getTwitterLabel(token.metadata?.twitter).color,
+                                                  color: '#FFFFFF',
+                                                  padding: '2px 8px',
+                                                  borderRadius: '9999px',
+                                                  fontSize: '0.75rem',
+                                                  lineHeight: '1rem'
+                                              }"
+                                              class="inline-flex items-center">
+                                            {{ getTwitterLabel(token.metadata?.twitter).label }}
+                                        </span>
+
+                                        <!-- 推特链接 -->
+                                        <a v-if="token.metadata?.twitter"
+                                           :href="token.metadata.twitter"
+                                           target="_blank"
+                                           class="inline-flex items-center"
+                                           :class="[
+                                               {
+                                                   'text-green-500': isFullTwitterLink(token.metadata.twitter),
+                                                   'text-yellow-500': isTwitterAccountLink(token.metadata.twitter),
+                                                   'text-red-500': !isValidTwitterLink(token.metadata.twitter)
+                                               }
+                                           ]">
+                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                                            </svg>
+                                            <span class="text-xs">推特</span>
+                                        </a>
 
                                         <!-- 电报链接 -->
                                         <a v-if="token.metadata?.telegram"
@@ -310,16 +310,29 @@
                                 </span>
                                 
                                 <!-- 推特标签和链接组合 -->
-                                <div v-if="group.twitterLink && getTwitterLabel(group.twitterLink)" class="flex items-center">
-                                    <span class="inline-flex items-center bg-green-50 text-green-600 px-2 py-1 rounded-full text-xs">
+                                <div v-if="group.twitterLink" class="flex items-center gap-1">
+                                    <!-- 推特标签（使用原始颜色） -->
+                                    <span v-if="getTwitterLabel(group.twitterLink)"
+                                          :style="{
+                                              backgroundColor: getTwitterLabel(group.twitterLink).color,
+                                              color: '#FFFFFF',
+                                              padding: '2px 8px',
+                                              borderRadius: '9999px',
+                                              fontSize: '0.75rem',
+                                              lineHeight: '1rem'
+                                          }"
+                                          class="inline-flex items-center">
                                         {{ getTwitterLabel(group.twitterLink).label }}
                                     </span>
+                                    
+                                    <!-- X推特链接 -->
                                     <a :href="group.twitterLink"
                                        target="_blank"
-                                       class="ml-1 text-blue-500 hover:text-blue-600">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                       class="inline-flex items-center text-blue-500 hover:text-blue-600">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
                                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                                         </svg>
+                                        <span class="text-xs">推特原文</span>
                                     </a>
                                 </div>
                             </div>
@@ -391,7 +404,7 @@
             <!-- 添加标签表单 -->
             <div v-if="showLabelForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div class="bg-white rounded-lg p-6 w-96">
-                    <h3 class="text-lg font-semibold mb-4">添加推特标签</h3>
+                    <h3 class="text-lg font-semibold mb-4">添加推特标��</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">推特链接</label>
