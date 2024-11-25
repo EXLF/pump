@@ -28,7 +28,13 @@ createApp({
                 label: '',
                 color: '#3B82F6' // 默认蓝色
             },
-            showLabelForm: false
+            showLabelForm: false,
+            lastScrollPosition: 0,  // 添加这个来记录滚动位置
+            polling: null,
+            isUserScrolling: false,  // 添加用户滚动状态标记
+            lastUpdateTime: 0,
+            imageCache: new Map(), // 用于缓存头像
+            updateInterval: 10000,  // 更新间隔改为10秒
         }
     },
     methods: {
@@ -55,8 +61,8 @@ createApp({
             return address.slice(0, 4) + '...' + address.slice(-4);
         },
         
-        handleImageError(e) {
-            e.target.src = 'https://via.placeholder.com/40';
+        handleImageError(event, token) {
+            event.target.src = this.getDefaultAvatar(token);
         },
         
         checkTwitterLink(link) {
@@ -325,6 +331,95 @@ createApp({
         
         isValidTwitterLink(url) {
             return this.isFullTwitterLink(url) || this.isTwitterAccountLink(url);
+        },
+        
+        async fetchData() {
+            try {
+                const now = Date.now();
+                if (now - this.lastUpdateTime < this.updateInterval) {
+                    return;
+                }
+
+                const response = await axios.get('/api/tokens');
+                const newData = this.processData(response.data);
+                
+                if (this.hasDataChanged(this.tokens, newData)) {
+                    newData.forEach(token => {
+                        if (token.metadata?.image) {
+                            this.imageCache.set(token.metadata.image, token.metadata.image);
+                        }
+                    });
+                    
+                    this.tokens = newData;
+                    this.lastUpdateTime = now;
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        },
+        
+        hasDataChanged(oldData, newData) {
+            if (oldData.length !== newData.length) return true;
+            
+            return newData.some((newItem, index) => {
+                const oldItem = oldData[index];
+                return newItem.id !== oldItem.id || 
+                       newItem.name !== oldItem.name ||
+                       newItem.metadata?.twitter !== oldItem.metadata?.twitter;
+            });
+        },
+        
+        getAvatarUrl(url) {
+            if (!url) return '';
+            if (this.imageCache.has(url)) {
+                return this.imageCache.get(url);
+            }
+            this.imageCache.set(url, url);
+            return url;
+        },
+        
+        startPolling() {
+            if (this.polling) {
+                clearInterval(this.polling);
+            }
+            this.polling = setInterval(() => {
+                this.fetchData();
+            }, this.updateInterval);
+        },
+        
+        handleScroll() {
+            this.isUserScrolling = true;
+            clearTimeout(this.scrollTimeout);
+            this.scrollTimeout = setTimeout(() => {
+                this.isUserScrolling = false;
+            }, 150);
+        },
+        
+        processData(data) {
+            if (!data) return [];
+            
+            if (data.tokens) {
+                return data.tokens;
+            }
+            
+            if (Array.isArray(data)) {
+                return data;
+            }
+            
+            if (typeof data === 'object') {
+                return Object.values(data);
+            }
+            
+            return [];
+        },
+        
+        getDefaultAvatar(token) {
+            return `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="%23666"><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="20">${this.getInitials(token.name)}</text></svg>`;
+        },
+        
+        getInitials(name) {
+            if (!name) return '?';
+            return name.charAt(0).toUpperCase();
         }
     },
     mounted() {
@@ -336,6 +431,9 @@ createApp({
             this.fetchDuplicateTokens();
         }, 2000);
         this.fetchTwitterLabels();
+        this.fetchData();
+        this.startPolling();
+        window.addEventListener('scroll', this.handleScroll);
     },
     beforeUnmount() {
         if (this.refreshInterval) {
@@ -343,6 +441,13 @@ createApp({
         }
         if (this.copyMessageTimer) {
             clearTimeout(this.copyMessageTimer);
+        }
+        if (this.polling) {
+            clearInterval(this.polling);
+        }
+        window.removeEventListener('scroll', this.handleScroll);
+        if (this.scrollTimeout) {
+            clearTimeout(this.scrollTimeout);
         }
     },
     computed: {

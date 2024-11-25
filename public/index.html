@@ -105,19 +105,25 @@
                                 <!-- 代币符号 -->
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <div class="flex items-center">
-                                        <div class="flex-shrink-0">
-                                            <img :src="token.metadata?.image" 
-                                                 class="h-10 w-10 rounded-full"
-                                                 @error="handleImageError">
+                                        <!-- 头像 -->
+                                        <div class="flex-shrink-0 h-8 w-8">
+                                            <img v-if="token.metadata?.image" 
+                                                 :src="token.metadata.image"
+                                                 class="h-8 w-8 rounded-full"
+                                                 :alt="token.name"
+                                                 loading="lazy"
+                                                 @error="handleImageError($event, token)">
+                                            <!-- 默认头像 -->
+                                            <div v-else
+                                                 class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                                <span class="text-xs text-gray-500">{{ getInitials(token.name) }}</span>
+                                            </div>
                                         </div>
+                                        
+                                        <!-- 符号 -->
                                         <div class="ml-4">
                                             <div class="text-sm font-medium text-gray-900">
                                                 {{ token.symbol }}
-                                                <span v-if="token.duplicateType" 
-                                                      :class="getDuplicateTypeClass(token.duplicateType)"
-                                                      class="ml-2 px-2 py-0.5 text-xs rounded-full">
-                                                    {{ getDuplicateTypeText(token.duplicateType) }}
-                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -208,22 +214,46 @@
                     </table>
                 </div>
 
-                <!-- 分页控件 -->
-                <div class="mt-4 flex justify-center space-x-2">
-                    <button v-for="p in paginationRange" 
-                            :key="p"
-                            @click="p !== '...' && changePage(p)"
-                            :class="[
-                                'px-3 py-1 rounded text-sm',
-                                {
-                                    'bg-blue-500 text-white': currentPage === p,
-                                    'bg-white text-blue-500 hover:bg-blue-100': currentPage !== p && p !== '...',
-                                    'bg-gray-100 text-gray-600 cursor-default': p === '...'
-                                }
-                            ]"
-                            :disabled="p === '...'">
-                        {{ p }}
-                    </button>
+                <!-- 分页控件 - 修改样式让它填充整个宽度 -->
+                <div class="mt-4 bg-white rounded-lg shadow p-4">
+                    <div class="flex justify-center items-center space-x-1">
+                        <!-- 上一页按钮 -->
+                        <button @click="currentPage > 1 && changePage(currentPage - 1)"
+                                :disabled="currentPage === 1"
+                                class="px-3 py-1 rounded text-sm"
+                                :class="currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                            上一页
+                        </button>
+
+                        <!-- 页码按钮 -->
+                        <button v-for="p in paginationRange" 
+                                :key="p"
+                                @click="p !== '...' && changePage(p)"
+                                :class="[
+                                    'px-3 py-1 rounded text-sm min-w-[32px]',
+                                    {
+                                        'bg-blue-500 text-white': currentPage === p,
+                                        'bg-white text-blue-500 hover:bg-blue-100': currentPage !== p && p !== '...',
+                                        'bg-gray-100 text-gray-600 cursor-default': p === '...'
+                                    }
+                                ]"
+                                :disabled="p === '...'">
+                            {{ p }}
+                        </button>
+
+                        <!-- 下一页按钮 -->
+                        <button @click="currentPage < pages && changePage(currentPage + 1)"
+                                :disabled="currentPage === pages"
+                                class="px-3 py-1 rounded text-sm"
+                                :class="currentPage === pages ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                            下一页
+                        </button>
+                    </div>
+
+                    <!-- 添加页码信息 -->
+                    <div class="mt-2 text-center text-sm text-gray-500">
+                        第 {{ currentPage }} 页，共 {{ pages }} 页，总计 {{ total }} 条记录
+                    </div>
                 </div>
             </div>
 
@@ -404,7 +434,7 @@
             <!-- 添加标签表单 -->
             <div v-if="showLabelForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div class="bg-white rounded-lg p-6 w-96">
-                    <h3 class="text-lg font-semibold mb-4">添加推特标��</h3>
+                    <h3 class="text-lg font-semibold mb-4">添加推特标</h3>
                     <div class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">推特链接</label>

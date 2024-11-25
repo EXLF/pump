@@ -1,0 +1,16 @@
+/* 添加一些必要的样式 */
+.h-screen {
+    height: 100vh;
+}
+
+.flex-1 {
+    flex: 1;
+}
+
+.overflow-auto {
+    overflow: auto;
+}
+
+.flex-none {
+    flex: none;
+} 
