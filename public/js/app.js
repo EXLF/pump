@@ -35,6 +35,11 @@ createApp({
             lastUpdateTime: 0,
             imageCache: new Map(), // 用于缓存头像
             updateInterval: 10000,  // 更新间隔改为10秒
+            importStatus: {
+                show: false,
+                message: '',
+                error: false
+            }
         }
     },
     methods: {
@@ -420,7 +425,140 @@ createApp({
         getInitials(name) {
             if (!name) return '?';
             return name.charAt(0).toUpperCase();
-        }
+        },
+        
+        exportTwitterLabels() {
+            try {
+                // 准备导出数据
+                const exportData = this.twitterLabels.map(label => ({
+                    twitterUrl: label.twitterUrl,
+                    label: label.label,
+                    color: label.color,
+                    timestamp: new Date(label.timestamp).toISOString()
+                }));
+
+                // 创建 Blob
+                const blob = new Blob(
+                    [JSON.stringify(exportData, null, 2)], 
+                    { type: 'application/json' }
+                );
+
+                // 创建下载链接
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                // 设置文件名（使用当前时间戳）
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                link.download = `twitter-labels-${timestamp}.json`;
+                
+                // 触发下载
+                document.body.appendChild(link);
+                link.click();
+                
+                // 清理
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('导出标签失败:', error);
+            }
+        },
+        
+        // 导入标签
+        async importTwitterLabels(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const labels = JSON.parse(e.target.result);
+                        
+                        // 验证数据格式
+                        if (!Array.isArray(labels)) {
+                            throw new Error('无效的数据格式');
+                        }
+
+                        this.importStatus = {
+                            show: true,
+                            message: '正在导入...',
+                            error: false
+                        };
+
+                        // 统计数据
+                        let imported = 0;
+                        let skipped = 0;
+                        
+                        // 批量导入标签
+                        for (const label of labels) {
+                            if (!label.twitterUrl || !label.label) {
+                                skipped++;
+                                continue;
+                            }
+                            
+                            // 检查是否重复
+                            const isDuplicate = this.twitterLabels.some(existingLabel => 
+                                this.normalizeTwitterUrl(existingLabel.twitterUrl) === this.normalizeTwitterUrl(label.twitterUrl) ||
+                                existingLabel.label === label.label
+                            );
+                            
+                            if (isDuplicate) {
+                                skipped++;
+                                continue;
+                            }
+
+                            // 导入新标签
+                            try {
+                                await axios.post('/api/twitter-labels', {
+                                    twitterUrl: label.twitterUrl,
+                                    label: label.label,
+                                    color: label.color || '#3B82F6'
+                                });
+                                imported++;
+                            } catch (error) {
+                                console.error('导入标签失败:', error);
+                                skipped++;
+                            }
+                        }
+
+                        // 刷新标签列表
+                        await this.fetchTwitterLabels();
+
+                        // 显示详细的导入结果
+                        this.importStatus = {
+                            show: true,
+                            message: `导入完成：成功 ${imported} 个，跳过 ${skipped} 个重复或无效标签`,
+                            error: false
+                        };
+
+                        // 3秒后隐藏消息
+                        setTimeout(() => {
+                            this.importStatus.show = false;
+                        }, 5000); // 延长显示时间到5秒，因为消息更长了
+
+                    } catch (error) {
+                        this.importStatus = {
+                            show: true,
+                            message: `导入失败: ${error.message}`,
+                            error: true
+                        };
+                    }
+                };
+
+                reader.readAsText(file);
+
+            } catch (error) {
+                this.importStatus = {
+                    show: true,
+                    message: `导入失败: ${error.message}`,
+                    error: true
+                };
+            }
+
+            // 清空文件输入框
+            event.target.value = '';
+        },
     },
     mounted() {
         this.fetchTokens();
