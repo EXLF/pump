@@ -8,7 +8,7 @@ createApp({
             currentPage: 1,
             total: 0,
             pages: 1,
-            lastUpdate: '从未',
+            lastUpdate: '',
             loading: false,
             error: null,
             refreshInterval: null,
@@ -39,7 +39,12 @@ createApp({
                 show: false,
                 message: '',
                 error: false
-            }
+            },
+            showLabelList: true, // 控制标签列表显示/隐藏
+            labelPage: 1,
+            labelPages: 1,
+            labelTotal: 0,
+            scrollPosition: 0
         }
     },
     methods: {
@@ -119,13 +124,21 @@ createApp({
         },
         
         getDuplicateColor(token) {
-            if (!token.duplicateType) return '';
-            const styleMap = {
-                'twitter_status': 'bg-green-100 border-l-4 border-green-500',
-                'symbol_match': 'bg-yellow-100 border-l-4 border-yellow-500',
-                'name_match': 'bg-red-100 border-l-4 border-red-500'
+            // 如果代币没有重复组，返回空字符串（无背景色）
+            if (!token.duplicateGroup) return '';
+            
+            const typeColors = {
+                'symbol': 'bg-yellow-50',
+                'twitter_status': 'bg-green-50',
+                'twitter_account': 'bg-blue-50',
+                'website': 'bg-red-50',
+                'telegram': 'bg-purple-50',
+                'symbol_match': 'bg-yellow-50',
+                'name_match': 'bg-red-50',
+                'twitter_match': 'bg-blue-50'
             };
-            return styleMap[token.duplicateType] || 'bg-gray-50';
+            
+            return typeColors[token.duplicateType] || 'bg-gray-50';
         },
 
         retryFetch() {
@@ -142,27 +155,34 @@ createApp({
             }
         },
 
-        async fetchTokens() {
+        async fetchTokens(forceRefresh = false) {
+            if (this.loading && !forceRefresh) return;
+            
             this.loading = true;
             this.error = null;
             
             try {
-                let url = '/api/tokens';
-                let params = { page: this.currentPage };
+                let params = { 
+                    page: this.currentPage
+                };
                 
-                if (this.activeTab === 'duplicates') {
-                    if (this.selectedDuplicateGroup) {
-                        url = `/api/duplicate-group-tokens/${this.selectedDuplicateGroup}`;
-                    } else {
-                        params.duplicatesOnly = true;
-                    }
+                // 优先处理特定组的查询
+                if (this.selectedDuplicateGroup) {
+                    params.groupNumber = this.selectedDuplicateGroup;
+                } else if (this.activeTab === 'duplicates') {
+                    params.duplicatesOnly = true;
                 }
                 
-                const response = await axios.get(url, { params });
-                this.tokens = response.data.tokens;
-                this.total = response.data.total;
-                this.pages = response.data.pages;
-                this.lastUpdate = new Date().toLocaleString();
+                const response = await axios.get('/api/tokens', { params });
+                
+                // 只有在当前状态匹配时才更新数据
+                if ((!this.selectedDuplicateGroup && !params.groupNumber) || 
+                    (this.selectedDuplicateGroup === params.groupNumber)) {
+                    this.tokens = response.data.tokens;
+                    this.total = response.data.total;
+                    this.pages = response.data.pages;
+                    this.lastUpdate = new Date().toLocaleString();
+                }
             } catch (error) {
                 this.error = '获取数据失败';
                 console.error(error);
@@ -174,7 +194,12 @@ createApp({
         async changePage(page) {
             if (page === this.currentPage) return;
             this.currentPage = page;
-            await this.fetchTokens();
+            
+            if (this.selectedDuplicateGroup) {
+                await this.fetchDuplicateGroupTokens();
+            } else {
+                await this.fetchTokens();
+            }
         },
 
         formatMonitorTime() {
@@ -187,28 +212,27 @@ createApp({
             this.duplicateCurrentPage = page;
         },
 
-        switchTab(tab) {
-            this.activeTab = tab;
-            if (tab === 'all') {
-                this.selectedDuplicateGroup = null;
-                this.selectedGroupSymbol = '';
+        async switchTab(tab) {
+            if (this.activeTab !== tab) {
+                if (this.selectedDuplicateGroup && tab !== 'duplicates') {
+                    this.selectedDuplicateGroup = null;
+                    this.selectedGroupSymbol = null;
+                }
+                
+                this.activeTab = tab;
+                this.currentPage = 1;
+                await this.fetchTokens();
             }
-            this.currentPage = 1;
-            this.fetchTokens();
-            this.updatePageTitle();
         },
 
         async showDuplicateGroupTokens(group) {
             try {
-                const response = await axios.get(`/api/duplicate-group-tokens/${group.groupNumber}`);
                 this.selectedDuplicateGroup = group.groupNumber;
                 this.selectedGroupSymbol = group.symbol;
-                this.tokens = response.data.tokens;
-                this.total = response.data.total;
-                this.pages = response.data.pages;
                 this.currentPage = 1;
                 this.activeTab = 'duplicates';
-
+                
+                await this.fetchDuplicateGroupTokens();
                 this.updatePageTitle();
             } catch (error) {
                 console.error('获取重复组代币失败:', error);
@@ -246,8 +270,10 @@ createApp({
         
         async fetchTwitterLabels() {
             try {
-                const response = await axios.get('/api/twitter-labels');
-                this.twitterLabels = response.data;
+                const response = await axios.get(`/api/twitter-labels?page=${this.labelPage}`);
+                this.twitterLabels = response.data.labels;
+                this.labelTotal = response.data.total;
+                this.labelPages = response.data.pages;
             } catch (error) {
                 console.error('获取推特标签失败:', error);
             }
@@ -255,8 +281,15 @@ createApp({
         
         async saveTwitterLabel() {
             try {
+                if (!this.newLabel.twitterUrl || !this.newLabel.label) {
+                    alert('请填写完整的标签信息');
+                    return;
+                }
+
                 await axios.post('/api/twitter-labels', this.newLabel);
                 await this.fetchTwitterLabels();
+                
+                // 重置表单
                 this.showLabelForm = false;
                 this.newLabel = {
                     twitterUrl: '',
@@ -265,6 +298,7 @@ createApp({
                 };
             } catch (error) {
                 console.error('保存推特标签失败:', error);
+                alert('保存标签失败，请重试');
             }
         },
         
@@ -465,7 +499,7 @@ createApp({
         },
         
         // 导入标签
-        async importTwitterLabels(event) {
+        async importLabels(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -474,69 +508,24 @@ createApp({
                 reader.onload = async (e) => {
                     try {
                         const labels = JSON.parse(e.target.result);
-                        
-                        // 验证数据格式
-                        if (!Array.isArray(labels)) {
-                            throw new Error('无效的数据格式');
-                        }
-
-                        this.importStatus = {
-                            show: true,
-                            message: '正在导入...',
-                            error: false
-                        };
-
-                        // 统计数据
                         let imported = 0;
                         let skipped = 0;
-                        
-                        // 批量导入标签
-                        for (const label of labels) {
-                            if (!label.twitterUrl || !label.label) {
-                                skipped++;
-                                continue;
-                            }
-                            
-                            // 检查是否重复
-                            const isDuplicate = this.twitterLabels.some(existingLabel => 
-                                this.normalizeTwitterUrl(existingLabel.twitterUrl) === this.normalizeTwitterUrl(label.twitterUrl) ||
-                                existingLabel.label === label.label
-                            );
-                            
-                            if (isDuplicate) {
-                                skipped++;
-                                continue;
-                            }
 
-                            // 导入新标签
+                        for (const label of labels) {
                             try {
-                                await axios.post('/api/twitter-labels', {
-                                    twitterUrl: label.twitterUrl,
-                                    label: label.label,
-                                    color: label.color || '#3B82F6'
-                                });
+                                await axios.post('/api/twitter-labels', label);
                                 imported++;
                             } catch (error) {
-                                console.error('导入标签失败:', error);
                                 skipped++;
                             }
                         }
 
-                        // 刷新标签列表
-                        await this.fetchTwitterLabels();
-
-                        // 显示详细的导入结果
                         this.importStatus = {
                             show: true,
                             message: `导入完成：成功 ${imported} 个，跳过 ${skipped} 个重复或无效标签`,
                             error: false
                         };
-
-                        // 3秒后隐藏消息
-                        setTimeout(() => {
-                            this.importStatus.show = false;
-                        }, 5000); // 延长显示时间到5秒，因为消息更长了
-
+                        await this.fetchTwitterLabels();
                     } catch (error) {
                         this.importStatus = {
                             show: true,
@@ -545,9 +534,7 @@ createApp({
                         };
                     }
                 };
-
                 reader.readAsText(file);
-
             } catch (error) {
                 this.importStatus = {
                     show: true,
@@ -555,23 +542,119 @@ createApp({
                     error: true
                 };
             }
-
-            // 清空文件输入框
-            event.target.value = '';
         },
+
+        // 导出标签
+        async exportLabels() {
+            try {
+                const response = await axios.get('/api/twitter-labels');
+                const labels = response.data.labels;
+                const dataStr = JSON.stringify(labels, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'twitter-labels.json';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('导出标签失败:', error);
+            }
+        },
+
+        // 添加新标签
+        async addNewLabel() {
+            if (!this.newLabel.twitterUrl || !this.newLabel.label || !this.newLabel.color) {
+                return;
+            }
+
+            try {
+                await axios.post('/api/twitter-labels', this.newLabel);
+                this.newLabel = { twitterUrl: '', label: '', color: '#000000' };
+                await this.fetchTwitterLabels();
+            } catch (error) {
+                console.error('添加标签失败:', error);
+            }
+        },
+
+        // 添加切换显示/隐藏方法
+        toggleLabelList() {
+            this.showLabelList = !this.showLabelList;
+        },
+
+        // 添加分页方法
+        async changeLabelPage(page) {
+            if (page >= 1 && page <= this.labelPages && page !== this.labelPage) {
+                this.labelPage = page;
+                await this.fetchTwitterLabels();
+            }
+        },
+
+        async fetchTokens() {
+            // 保存滚动位置
+            this.scrollPosition = this.$refs.tableContainer.scrollTop;
+            
+            try {
+                const response = await axios.get(`/api/tokens?page=${this.currentPage}&duplicatesOnly=${this.activeTab === 'duplicates'}`);
+                this.tokens = response.data.tokens;
+                this.total = response.data.total;  // 确保设置总数
+                this.pages = response.data.pages;
+                this.lastUpdate = this.formatTime(new Date());  // 更新时间
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                this.error = '获取数据失败，请稍后重试';
+            }
+            
+            // 恢复滚动位置
+            this.$nextTick(() => {
+                if (this.$refs.tableContainer) {
+                    this.$refs.tableContainer.scrollTop = this.scrollPosition;
+                }
+            });
+        },
+
+        // 添加新方法用于获取特定重复组的代币
+        async fetchDuplicateGroupTokens() {
+            try {
+                const response = await axios.get(
+                    `/api/duplicate-group-tokens/${this.selectedDuplicateGroup}`,
+                    { params: { page: this.currentPage } }
+                );
+                
+                this.tokens = response.data.tokens;
+                this.total = response.data.total;
+                this.pages = response.data.pages;
+                this.lastUpdate = new Date().toLocaleString();
+            } catch (error) {
+                console.error('获取重复组代币失败:', error);
+            }
+        }
     },
     mounted() {
         this.fetchTokens();
         this.fetchDuplicateTokens();
         
         this.refreshInterval = setInterval(() => {
-            this.fetchTokens();
+            // 根据当前状态决定刷新方式
+            if (this.selectedDuplicateGroup) {
+                this.fetchDuplicateGroupTokens();
+            } else {
+                this.fetchTokens();
+            }
             this.fetchDuplicateTokens();
         }, 2000);
+        
         this.fetchTwitterLabels();
         this.fetchData();
         this.startPolling();
         window.addEventListener('scroll', this.handleScroll);
+        // 恢复上次的滚动位置
+        const savedPosition = sessionStorage.getItem('scrollPosition');
+        if (savedPosition) {
+            window.scrollTo(0, parseInt(savedPosition));
+        }
     },
     beforeUnmount() {
         if (this.refreshInterval) {
@@ -587,6 +670,8 @@ createApp({
         if (this.scrollTimeout) {
             clearTimeout(this.scrollTimeout);
         }
+        // 保存当前滚动位置
+        sessionStorage.setItem('scrollPosition', window.scrollY.toString());
     },
     computed: {
         paginationRange() {
@@ -617,6 +702,43 @@ createApp({
                     range.push('...');
                 }
             }
+            return range;
+        },
+        labelPaginationRange() {
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = this.labelPage - leftOffset;
+            let end = this.labelPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), this.labelPages);
+                start = 1;
+            }
+            
+            if (end > this.labelPages) {
+                start = Math.max(start - (end - this.labelPages), 1);
+                end = this.labelPages;
+            }
+            
+            // 添加第一页
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            // 添加中间页码
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            // 添加最后一页
+            if (end < this.labelPages) {
+                if (end < this.labelPages - 1) range.push('...');
+                range.push(this.labelPages);
+            }
+            
             return range;
         }
     }

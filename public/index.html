@@ -84,134 +84,127 @@
                 </div>
 
                 <!-- 代币列表表格 -->
-                <div v-if="!loading && !error" class="bg-white rounded-lg shadow overflow-hidden">
-                    <table class="min-w-full">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代币符号</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代币地址</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">社交媒体</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr v-for="token in tokens" 
-                                :key="token.mint" 
-                                :class="[
-                                    'hover:bg-gray-50 transition-all duration-200',
-                                    getDuplicateColor(token)
-                                ]">
-                                <!-- 代币符号 -->
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <!-- 头像 -->
-                                        <div class="flex-shrink-0 h-8 w-8">
-                                            <img v-if="token.metadata?.image" 
-                                                 :src="token.metadata.image"
-                                                 class="h-8 w-8 rounded-full"
-                                                 :alt="token.name"
-                                                 loading="lazy"
-                                                 @error="handleImageError($event, token)">
-                                            <!-- 默认头像 -->
-                                            <div v-else
-                                                 class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                                <span class="text-xs text-gray-500">{{ getInitials(token.name) }}</span>
+                <div class="overflow-auto" ref="tableContainer">
+                    <div v-if="!loading && !error" class="bg-white rounded-lg shadow">
+                        <table class="min-w-full">
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr v-for="token in tokens" 
+                                    :key="token.mint"
+                                    :class="[
+                                        getDuplicateColor(token),
+                                        'hover:bg-gray-50'
+                                    ]">
+                                    <!-- 代币符号 -->
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <!-- 头像 -->
+                                            <div class="flex-shrink-0 h-8 w-8">
+                                                <img v-if="token.metadata?.image" 
+                                                     :src="token.metadata.image"
+                                                     class="h-8 w-8 rounded-full"
+                                                     :alt="token.name"
+                                                     loading="lazy"
+                                                     @error="handleImageError($event, token)">
+                                                <!-- 默认头像 -->
+                                                <div v-else
+                                                     class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                                    <span class="text-xs text-gray-500">{{ getInitials(token.name) }}</span>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- 符号 -->
+                                            <div class="ml-4">
+                                                <div class="text-sm font-medium text-gray-900">
+                                                    {{ token.symbol }}
+                                                </div>
                                             </div>
                                         </div>
-                                        
-                                        <!-- 符号 -->
-                                        <div class="ml-4">
-                                            <div class="text-sm font-medium text-gray-900">
-                                                {{ token.symbol }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                
-                                <!-- 名称 -->
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm text-gray-900">{{ token.name }}</div>
-                                </td>
-                                
-                                <!-- 代币地址 -->
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span @click="copyAddress(token.mint)"
-                                          class="text-blue-600 hover:text-blue-900 cursor-pointer">
-                                        {{ formatAddress(token.mint) }}
-                                    </span>
-                                </td>
-                                
-                                <!-- 创建时间 -->
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ formatTime(token.timestamp) }}
-                                </td>
-
-                                <!-- 社交媒体 -->
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center gap-2">
-                                        <!-- 推特标签（如果存在） -->
-                                        <span v-if="getTwitterLabel(token.metadata?.twitter)"
-                                              :style="{
-                                                  backgroundColor: getTwitterLabel(token.metadata?.twitter).color,
-                                                  color: '#FFFFFF',
-                                                  padding: '2px 8px',
-                                                  borderRadius: '9999px',
-                                                  fontSize: '0.75rem',
-                                                  lineHeight: '1rem'
-                                              }"
-                                              class="inline-flex items-center">
-                                            {{ getTwitterLabel(token.metadata?.twitter).label }}
+                                    </td>
+                                    
+                                    <!-- 名称 -->
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ token.name }}</div>
+                                    </td>
+                                    
+                                    <!-- 代币地址 -->
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span @click="copyAddress(token.mint)"
+                                              class="text-blue-600 hover:text-blue-900 cursor-pointer">
+                                            {{ formatAddress(token.mint) }}
                                         </span>
+                                    </td>
+                                    
+                                    <!-- 创建时间 -->
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ formatTime(token.timestamp) }}
+                                    </td>
 
-                                        <!-- 推特链接 -->
-                                        <a v-if="token.metadata?.twitter"
-                                           :href="token.metadata.twitter"
-                                           target="_blank"
-                                           class="inline-flex items-center"
-                                           :class="[
-                                               {
-                                                   'text-green-500': isFullTwitterLink(token.metadata.twitter),
-                                                   'text-yellow-500': isTwitterAccountLink(token.metadata.twitter),
-                                                   'text-red-500': !isValidTwitterLink(token.metadata.twitter)
-                                               }
-                                           ]">
-                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                                            </svg>
-                                            <span class="text-xs">推特</span>
-                                        </a>
+                                    <!-- 社交媒体 -->
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center gap-2">
+                                            <!-- 推特标签（如果存在） -->
+                                            <span v-if="getTwitterLabel(token.metadata?.twitter)"
+                                                  :style="{
+                                                      backgroundColor: getTwitterLabel(token.metadata?.twitter).color,
+                                                      color: '#FFFFFF',
+                                                      padding: '2px 8px',
+                                                      borderRadius: '9999px',
+                                                      fontSize: '0.75rem',
+                                                      lineHeight: '1rem'
+                                                  }"
+                                                  class="inline-flex items-center">
+                                                {{ getTwitterLabel(token.metadata?.twitter).label }}
+                                            </span>
 
-                                        <!-- 电报链接 -->
-                                        <a v-if="token.metadata?.telegram"
-                                           :href="token.metadata.telegram"
-                                           target="_blank"
-                                           class="text-blue-500 hover:text-blue-600">
-                                            <div class="flex items-center">
-                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                                            <!-- 推特链接 -->
+                                            <a v-if="token.metadata?.twitter"
+                                               :href="token.metadata.twitter"
+                                               target="_blank"
+                                               class="inline-flex items-center"
+                                               :class="[
+                                                   {
+                                                       'text-green-500': isFullTwitterLink(token.metadata.twitter),
+                                                       'text-yellow-500': isTwitterAccountLink(token.metadata.twitter),
+                                                       'text-red-500': !isValidTwitterLink(token.metadata.twitter)
+                                                   }
+                                               ]">
+                                                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                                                 </svg>
-                                                <span class="ml-1 text-xs">电报</span>
-                                            </div>
-                                        </a>
+                                                <span class="text-xs">推特</span>
+                                            </a>
 
-                                        <!-- 网站链接 -->
-                                        <a v-if="token.metadata?.website"
-                                           :href="token.metadata.website"
-                                           target="_blank"
-                                           class="text-gray-500 hover:text-gray-600">
-                                            <div class="flex items-center">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
-                                                </svg>
-                                                <span class="ml-1 text-xs">网站</span>
-                                            </div>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                            <!-- 电报链接 -->
+                                            <a v-if="token.metadata?.telegram"
+                                               :href="token.metadata.telegram"
+                                               target="_blank"
+                                               class="text-blue-500 hover:text-blue-600">
+                                                <div class="flex items-center">
+                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                                                    </svg>
+                                                    <span class="ml-1 text-xs">电报</span>
+                                                </div>
+                                            </a>
+
+                                            <!-- 网站链接 -->
+                                            <a v-if="token.metadata?.website"
+                                               :href="token.metadata.website"
+                                               target="_blank"
+                                               class="text-gray-500 hover:text-gray-600">
+                                                <div class="flex items-center">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                                    </svg>
+                                                    <span class="ml-1 text-xs">网站</span>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- 分页控件 - 修改样式让它填充整个宽度 -->
@@ -241,7 +234,7 @@
                             {{ p }}
                         </button>
 
-                        <!-- 下一页按钮 -->
+                        
                         <button @click="currentPage < pages && changePage(currentPage + 1)"
                                 :disabled="currentPage === pages"
                                 class="px-3 py-1 rounded text-sm"
@@ -250,7 +243,7 @@
                         </button>
                     </div>
 
-                    <!-- 添加页码信息 -->
+                    <!-- 添加页码 -->
                     <div class="mt-2 text-center text-sm text-gray-500">
                         第 {{ currentPage }} 页，共 {{ pages }} 页，总计 {{ total }} 条记录
                     </div>
@@ -281,8 +274,7 @@
                         <!-- 使用计算属性显示当前页的代币 -->
                         <div v-else v-for="group in paginatedDuplicateTokens" 
                              :key="group.groupNumber"
-                             class="p-4 rounded-lg shadow-sm transition-all duration-200"
-                             :class="getDuplicateColor(group)">
+                             class="p-4 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md">
                             <!-- 代币基本信息 -->
                             <div class="flex items-center">
                                 <div class="flex items-center flex-1">
@@ -292,6 +284,9 @@
                                          @error="handleImageError">
                                     <div class="ml-3">
                                         <div class="font-medium text-gray-900">{{ group.symbol }}</div>
+                                        <div class="text-sm text-gray-500">
+                                            {{ getDuplicateTypeText(group.type) }}
+                                        </div>
                                     </div>
                                 </div>
                                 <!-- 重复次数 -->
@@ -405,70 +400,43 @@
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-800">推特标签管理</h3>
                 <div class="flex gap-2">
-                    <!-- 导入按钮 -->
-                    <input type="file" 
-                           ref="fileInput" 
-                           @change="importTwitterLabels" 
-                           accept=".json"
-                           class="hidden">
-                    <button @click="$refs.fileInput.click()" 
-                            class="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600 flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                        </svg>
-                        导入标签
+                    <!-- 显示/隐藏按钮 -->
+                    <button @click="toggleLabelList" 
+                            class="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600">
+                        <span v-if="showLabelList">隐藏列表</span>
+                        <span v-else>显示列表</span>
                     </button>
-                    <!-- 导出按钮 -->
-                    <button @click="exportTwitterLabels" 
-                            class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 flex items-center">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                        </svg>
-                        导出标签
-                    </button>
-                    <!-- 添加按钮 -->
-                    <button @click="showLabelForm = true" 
-                            class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
-                        添加标签
-                    </button>
-                </div>
-            </div>
-            
-            <!-- 导入进度提示 -->
-            <div v-if="importStatus.show" 
-                 :class="[
-                     'mb-4 p-3 rounded',
-                     importStatus.error ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                 ]">
-                {{ importStatus.message }}
-            </div>
-            
-            <!-- 现有的标签列表 -->
-            <div class="space-y-3">
-                <div v-for="label in twitterLabels" 
-                     :key="label._id"
-                     class="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div class="flex items-center space-x-3">
-                        <span :style="{
-                            backgroundColor: label.color,
-                            color: '#FFFFFF',
-                            padding: '2px 8px',
-                            borderRadius: '4px'
-                        }">{{ label.label }}</span>
-                        <span class="text-sm text-gray-500">{{ label.twitterUrl }}</span>
+                    <!-- 导入/导出/添加按钮 -->
+                    <div class="flex gap-2">
+                        <!-- 导入标签 -->
+                        <input type="file" 
+                               ref="fileInput" 
+                               @change="importLabels" 
+                               accept=".json" 
+                               class="hidden">
+                        <button @click="$refs.fileInput.click()" 
+                                class="px-3 py-1 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                            导入标签
+                        </button>
+                        
+                        <!-- 导出标签 -->
+                        <button @click="exportLabels" 
+                                class="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600">
+                            导出标签
+                        </button>
+                        
+                        <!-- 添加标签 -->
+                        <button @click="showLabelForm = true" 
+                                class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            添加标签
+                        </button>
                     </div>
-                    <button @click="deleteTwitterLabel(label._id)"
-                            class="text-red-500 hover:text-red-700">
-                        删除
-                    </button>
                 </div>
             </div>
-            
+
             <!-- 添加标签表单 -->
             <div v-if="showLabelForm" 
-                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center backdrop-blur-sm">
+                 class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center backdrop-blur-sm z-50">
                 <div class="bg-white rounded-lg shadow-2xl" style="width: 800px;">
                     <!-- 头部标题区域 -->
                     <div class="px-8 py-4 border-b border-gray-100">
@@ -522,6 +490,71 @@
                                 class="px-6 py-2.5 text-sm bg-blue-500 text-white rounded
                                        hover:bg-blue-600">
                             保存
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签列表 -->
+            <div v-if="showLabelList" class="space-y-3">
+                <!-- 标签项 -->
+                <div v-for="label in twitterLabels" 
+                     :key="label._id"
+                     class="flex items-center justify-between p-3 bg-gray-50 rounded">
+                    <div class="flex items-center space-x-3">
+                        <span :style="{
+                            backgroundColor: label.color,
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            color: '#FFFFFF'
+                        }">{{ label.label }}</span>
+                        <span class="text-sm text-gray-500">{{ label.twitterUrl }}</span>
+                    </div>
+                    <button @click="deleteTwitterLabel(label._id)"
+                            class="text-red-500 hover:text-red-700">
+                        删除
+                    </button>
+                </div>
+
+                <!-- 分页控件 -->
+                <div class="mt-4 flex justify-between items-center">
+                    <!-- 页码信息 -->
+                    <div class="text-sm text-gray-500">
+                        第 {{ labelPage }} 页，共 {{ labelPages }} 页
+                    </div>
+                    
+                    <!-- 分页按钮 -->
+                    <div class="flex space-x-2">
+                        <!-- 上一页 -->
+                        <button @click="changeLabelPage(labelPage - 1)"
+                                :disabled="labelPage === 1"
+                                class="px-3 py-1 rounded text-sm"
+                                :class="labelPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                            上一页
+                        </button>
+                        
+                        <!-- 页码按钮 -->
+                        <button v-for="p in labelPaginationRange" 
+                                :key="p"
+                                @click="p !== '...' && changeLabelPage(p)"
+                                :class="[
+                                    'px-3 py-1 rounded text-sm',
+                                    {
+                                        'bg-blue-500 text-white': labelPage === p,
+                                        'bg-white text-blue-500 hover:bg-blue-100': labelPage !== p && p !== '...',
+                                        'bg-gray-100 text-gray-600 cursor-default': p === '...'
+                                    }
+                                ]"
+                                :disabled="p === '...'">
+                            {{ p }}
+                        </button>
+                        
+                        <!-- 下一页 -->
+                        <button @click="changeLabelPage(labelPage + 1)"
+                                :disabled="labelPage === labelPages"
+                                class="px-3 py-1 rounded text-sm"
+                                :class="labelPage === labelPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                            下一页
                         </button>
                     </div>
                 </div>

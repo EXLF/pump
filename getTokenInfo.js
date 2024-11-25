@@ -374,20 +374,45 @@ async function initializeTokenCheck() {
 async function main() {
     console.log(JSON.stringify({
         status: 'started',
-        message: 'Initializing token check'
+        message: 'Starting token monitoring and initialization simultaneously'
     }, null, 2));
-    
-    // 先进行初始化检测
-    await initializeTokenCheck();
-    
-    console.log(JSON.stringify({
-        status: 'initialized',
-        message: 'Starting token monitoring'
-    }, null, 2));
-    
-    // 然后开始常规监控
-    while (true) {
-        await fetchTokenData();
+
+    // 创建初始化检测的 Promise
+    const initializationPromise = (async () => {
+        try {
+            await initializeTokenCheck();
+            console.log(JSON.stringify({
+                status: 'initialized',
+                message: 'Duplicate group initialization complete'
+            }, null, 2));
+        } catch (error) {
+            console.error('初始化检测失败:', error);
+        }
+    })();
+
+    // 创建常规监控的 Promise
+    const monitoringPromise = (async () => {
+        while (true) {
+            try {
+                await fetchTokenData();
+                // 添加小延迟以避免请求过于频繁
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            } catch (error) {
+                console.error('监控数据获取失败:', error);
+                // 错误后等待短暂时间再重试
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+        }
+    })();
+
+    // 同时执行两个任务
+    try {
+        await Promise.all([
+            initializationPromise,
+            monitoringPromise
+        ]);
+    } catch (error) {
+        console.error('执行出错:', error);
     }
 }
 
