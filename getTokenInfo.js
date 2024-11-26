@@ -55,7 +55,7 @@ async function fetchTokenData() {
                     name: tokenData.name,
                     symbol: tokenData.symbol,
                     mint: tokenData.mint,
-                    timestamp: new Date(tokenData.timestamp),
+                    timestamp: new Date(new Date(tokenData.timestamp).getTime() + 8 * 60 * 60 * 1000),
                     bondingCurve: tokenData.bondingCurve,
                     dev: tokenData.dev,
                     metadata: metadata,

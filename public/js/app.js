@@ -63,10 +63,10 @@ createApp({
         formatTime(time) {
             if (!time) return '';
             
-            // 创建一个新的 Date 对象，并添加 8 小时
-            const date = new Date(new Date(time).getTime() + 60 * 60 * 1000 - 5 * 60 * 60 * 1000);
+            // 创建一个新的 Date 对象，直接使用原始时间
+            const date = new Date(time);
             
-            // 使用 toLocaleString 格式化时间
+            // 使用 toLocaleString 时指定时区为 'Asia/Shanghai'
             return date.toLocaleString('zh-CN', {
                 year: 'numeric',
                 month: '2-digit',
@@ -74,7 +74,8 @@ createApp({
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
-                hour12: false
+                hour12: false,
+                timeZone: 'Asia/Shanghai'
             });
         },
         

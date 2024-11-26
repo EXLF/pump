@@ -60,9 +60,9 @@ app.get('/api/tokens', async (req, res) => {
             Token.countDocuments(query)
         ]);
 
-        // 调整时间为 UTC+8
+        // 调整时间为 UTC+4
         tokens.forEach(token => {
-            token.timestamp = new Date(new Date(token.timestamp).getTime() + 8 * 60 * 60 * 1000);
+            token.timestamp = new Date(new Date(token.timestamp).getTime() + 4 * 60 * 60 * 1000);
         });
 
         const result = {
@@ -113,10 +113,12 @@ app.get('/api/duplicate-tokens', async (req, res) => {
 
             if (tokens.length === 0) return null;
 
-            // 获取最新和最早的时间戳
-            const latestTime = tokens[0].timestamp;
-            const previousTime = tokens[1]?.timestamp || null;
-            const firstTime = tokens[tokens.length - 1].timestamp;
+            // 获取最新和最早的时间戳，并统一加4小时调整时区
+            const latestTime = new Date(tokens[0].timestamp).getTime() + 4 * 60 * 60 * 1000;
+            const previousTime = tokens[1]?.timestamp 
+                ? new Date(tokens[1].timestamp).getTime() + 4 * 60 * 60 * 1000 
+                : null;
+            const firstTime = new Date(tokens[tokens.length - 1].timestamp).getTime() + 4 * 60 * 60 * 1000;
 
             // 检查是否有完整的推特链接
             const twitterToken = tokens.find(t => 
@@ -235,7 +237,7 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
 
         // 调整时间为 UTC+8
         tokens.forEach(token => {
-            token.timestamp = new Date(new Date(token.timestamp).getTime() + 8 * 60 * 60 * 1000);
+            token.timestamp = new Date(new Date(token.timestamp).getTime() + 4 * 60 * 60 * 1000);
         });
 
         // 返回分页数据
@@ -290,7 +292,7 @@ app.get('/api/tokens/search', async (req, res) => {
 
         // 调整时间为 UTC+8
         tokens.forEach(token => {
-            token.timestamp = new Date(new Date(token.timestamp).getTime() + 8 * 60 * 60 * 1000);
+            token.timestamp = new Date(new Date(token.timestamp).getTime() + 4 * 60 * 60 * 1000);
         });
 
         res.json({
