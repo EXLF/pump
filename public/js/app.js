@@ -84,7 +84,8 @@ createApp({
         },
         
         handleImageError(event, token) {
-            event.target.src = this.getDefaultAvatar(token);
+            event.target.style.display = 'none';  // 隐藏失败的图片
+            event.target.onerror = null;  // 防止无限循环
         },
         
         checkTwitterLink(link) {
@@ -473,7 +474,7 @@ createApp({
         },
         
         getInitials(name) {
-            if (!name) return '?';
+            if (!name) return '';
             return name.charAt(0).toUpperCase();
         },
         
