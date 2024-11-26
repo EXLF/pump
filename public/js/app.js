@@ -51,6 +51,12 @@ createApp({
             searchPages: 1,
             searchCurrentPage: 1,
             isSearchActive: false,
+            duplicateSearchQuery: '',
+            isDuplicateSearchActive: false,
+            duplicateSearchResults: [],
+            duplicatePolling: null,
+            duplicateSearchPage: 1,
+            duplicateSearchTotalPages: 1,
         }
     },
     methods: {
@@ -154,8 +160,11 @@ createApp({
 
         async fetchDuplicateTokens() {
             try {
+                if (this.isDuplicateSearchActive) return;
+
                 const response = await axios.get('/api/duplicate-tokens');
                 this.duplicateTokens = response.data;
+                this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
             } catch (error) {
                 console.error('获取重复代币失败:', error);
             }
@@ -339,7 +348,7 @@ createApp({
             return label ? {
                 ...label,
                 // 确保颜色值是有效的
-                color: label.color || '#6366f1' // 默认颜色，以防没有设置
+                color: label.color || '#6366f1' // 默认颜色，防没有设置
             } : null;
         },
         
@@ -425,11 +434,11 @@ createApp({
         },
         
         startPolling() {
-            if (this.polling) {
-                clearInterval(this.polling);
-            }
+            this.fetchTokens();
             this.polling = setInterval(() => {
-                this.fetchData();
+                if (!this.isSearchActive) {
+                    this.fetchTokens();
+                }
             }, this.updateInterval);
         },
         
@@ -685,7 +694,66 @@ createApp({
             
             // 恢复自动刷新
             this.startPolling();
-        }
+        },
+
+        // 搜索重复代币
+        async searchDuplicateTokens() {
+            if (!this.duplicateSearchQuery.trim()) {
+                return;
+            }
+
+            try {
+                this.loading = true;
+                const response = await axios.get('/api/duplicate-tokens', {
+                    params: {
+                        query: this.duplicateSearchQuery.trim()
+                    }
+                });
+                
+                this.duplicateSearchResults = response.data;
+                this.isDuplicateSearchActive = true;
+                this.duplicateSearchPage = 1; // 重置搜索结果页码
+                
+                // 停止轮询
+                if (this.duplicatePolling) {
+                    clearInterval(this.duplicatePolling);
+                    this.duplicatePolling = null;
+                }
+            } catch (error) {
+                console.error('搜索重复代币失败:', error);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // 清除搜索
+        async clearDuplicateSearch() {
+            this.duplicateSearchQuery = '';
+            this.isDuplicateSearchActive = false;
+            this.duplicateSearchResults = [];
+            this.duplicateSearchPage = 1;
+            // 恢复轮询
+            this.startDuplicatePolling();
+        },
+
+        // 添加重复组数据的轮询方法
+        startDuplicatePolling() {
+            this.fetchDuplicateTokens(); // 立即获取一次数据
+            this.duplicatePolling = setInterval(() => {
+                this.fetchDuplicateTokens();
+            }, this.updateInterval);
+        },
+
+        // 处理分页切换
+        handleDuplicatePageChange(page) {
+            if (this.isDuplicateSearchActive) {
+                if (page < 1 || page > this.duplicateSearchTotalPages) return;
+                this.duplicateSearchPage = page;
+            } else {
+                if (page < 1 || page > this.duplicateTotalPages) return;
+                this.duplicateCurrentPage = page;
+            }
+        },
     },
     mounted() {
         this.fetchTokens();
@@ -704,6 +772,7 @@ createApp({
         this.fetchTwitterLabels();
         this.fetchData();
         this.startPolling();
+        this.startDuplicatePolling();
         window.addEventListener('scroll', this.handleScroll);
         // 恢复上次的滚动位置
         const savedPosition = sessionStorage.getItem('scrollPosition');
@@ -720,6 +789,9 @@ createApp({
         }
         if (this.polling) {
             clearInterval(this.polling);
+        }
+        if (this.duplicatePolling) {
+            clearInterval(this.duplicatePolling);
         }
         window.removeEventListener('scroll', this.handleScroll);
         if (this.scrollTimeout) {
@@ -747,16 +819,40 @@ createApp({
             return this.duplicateTokens.slice(start, end);
         },
         duplicatePaginationRange() {
-            this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
+            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+            const totalPages = this.isDuplicateSearchActive ? this.duplicateSearchTotalPages : this.duplicateTotalPages;
+            
             const range = [];
-            for (let i = 1; i <= this.duplicateTotalPages; i++) {
-                if (i === 1 || i === this.duplicateTotalPages || 
-                    (i >= this.duplicateCurrentPage - 1 && i <= this.duplicateCurrentPage + 1)) {
-                    range.push(i);
-                } else if (range[range.length - 1] !== '...') {
-                    range.push('...');
-                }
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = currentPage - leftOffset;
+            let end = currentPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), totalPages);
+                start = 1;
             }
+            
+            if (end > totalPages) {
+                start = Math.max(start - (end - totalPages), 1);
+                end = totalPages;
+            }
+            
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            if (end < totalPages) {
+                if (end < totalPages - 1) range.push('...');
+                range.push(totalPages);
+            }
+            
             return range;
         },
         labelPaginationRange() {
@@ -835,6 +931,83 @@ createApp({
         },
         displayedTokens() {
             return this.isSearchActive ? this.searchResults : this.tokens;
+        },
+        displayedDuplicateTokens() {
+            if (this.isDuplicateSearchActive) {
+                const start = (this.duplicateSearchPage - 1) * this.duplicatePageSize;
+                const end = start + this.duplicatePageSize;
+                return this.duplicateSearchResults.slice(start, end);
+            } else {
+                const start = (this.duplicateCurrentPage - 1) * this.duplicatePageSize;
+                const end = start + this.duplicatePageSize;
+                return this.duplicateTokens.slice(start, end);
+            }
+        },
+        // 计算当前使用的页码
+        currentDuplicatePage() {
+            return this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+        },
+
+        // 计算总页数
+        duplicateTotalPages() {
+            const totalItems = this.isDuplicateSearchActive 
+                ? this.duplicateSearchResults.length 
+                : this.duplicateTokens.length;
+            return Math.max(1, Math.ceil(totalItems / this.duplicatePageSize));
+        },
+
+        // 计算搜索结果总页数
+        duplicateSearchTotalPages() {
+            const totalItems = this.duplicateSearchResults.length;
+            return Math.max(1, Math.ceil(totalItems / this.duplicatePageSize));
+        },
+
+        // 分页范围计算
+        duplicatePaginationRange() {
+            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+            const totalPages = this.isDuplicateSearchActive ? this.duplicateSearchTotalPages : this.duplicateTotalPages;
+            
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = currentPage - leftOffset;
+            let end = currentPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), totalPages);
+                start = 1;
+            }
+            
+            if (end > totalPages) {
+                start = Math.max(start - (end - totalPages), 1);
+                end = totalPages;
+            }
+            
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            if (end < totalPages) {
+                if (end < totalPages - 1) range.push('...');
+                range.push(totalPages);
+            }
+            
+            return range;
+        },
+
+        // 显示的重复组数据
+        displayedDuplicateTokens() {
+            const data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
+            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+            const start = (currentPage - 1) * this.duplicatePageSize;
+            const end = start + this.duplicatePageSize;
+            return data.slice(start, end);
         }
     }
 }).mount('#app'); 

@@ -313,21 +313,47 @@
                         </span>
                     </div>
 
+                    <!-- 添加搜索框 -->
+                    <div class="mb-4">
+                        <div class="relative">
+                            <input type="text"
+                                   v-model="duplicateSearchQuery"
+                                   @keyup.enter="searchDuplicateTokens"
+                                   placeholder="搜索代币符号或地址"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                            <div class="absolute inset-y-0 right-0 flex items-center pr-3">
+                                <button @click="clearDuplicateSearch" 
+                                        v-if="isDuplicateSearchActive"
+                                        class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                                <button @click="searchDuplicateTokens"
+                                        v-else
+                                        class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 搜索结果提示 -->
+                    <div v-if="isDuplicateSearchActive" class="mb-4 text-sm text-gray-600 flex justify-between items-center">
+                        <span>找到 {{ duplicateSearchResults.length }} 个匹配的重复组</span>
+                        <button @click="clearDuplicateSearch" 
+                                class="text-blue-500 hover:text-blue-600 text-sm">
+                            显示所有重复组
+                        </button>
+                    </div>
+
                     <!-- 重复代币列表 -->
                     <div class="space-y-4">
-                        <div v-if="duplicateTokens.length === 0" 
-                             class="py-8 text-center text-gray-500">
-                            <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <p>暂无重复代币</p>
-                            <p class="text-sm mt-2">持续监控中...</p>
-                        </div>
-
-                        <!-- 使用计算属性显示当前页的代币 -->
-                        <div v-else v-for="group in paginatedDuplicateTokens" 
+                        <div v-for="group in displayedDuplicateTokens" 
                              :key="group.groupNumber"
-                             class="p-4 rounded-lg shadow-sm transition-all duration-200 hover:shadow-md">
+                             class="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200">
                             <!-- 代币基本信息 -->
                             <div class="flex items-center">
                                 <div class="flex items-center flex-1">
@@ -416,23 +442,46 @@
                             </div>
                         </div>
 
-                        <!-- 分页控件 -->
-                        <div v-if="duplicateTokens.length > 0" 
-                             class="mt-4 flex justify-center space-x-1">
-                            <button v-for="p in duplicatePaginationRange" 
-                                    :key="p"
-                                    @click="changeDuplicatePage(p)"
-                                    :class="[
-                                        'px-2 py-1 text-xs rounded',
-                                        {
-                                            'bg-blue-500 text-white': duplicateCurrentPage === p,
-                                            'bg-gray-100 text-gray-600 hover:bg-gray-200': duplicateCurrentPage !== p && p !== '...',
-                                            'bg-gray-50 text-gray-400 cursor-not-allowed': p === '...'
-                                        }
-                                    ]"
-                                    :disabled="p === '...'">
-                                {{ p }}
-                            </button>
+                        <!-- 重复代币监控区域的分页控件 -->
+                        <div class="mt-4">
+                            <!-- 页码信息 -->
+                            <div class="text-xs text-gray-500 mb-2">
+                                第 {{ isDuplicateSearchActive ? duplicateSearchPage : duplicateCurrentPage }} 页，
+                                共 {{ isDuplicateSearchActive ? duplicateSearchTotalPages : duplicateTotalPages }} 页
+                            </div>
+                            
+                            <!-- 分页按钮 -->
+                            <div class="flex flex-wrap gap-1">
+                                <!-- 上一页 -->
+                                <button @click="handleDuplicatePageChange(isDuplicateSearchActive ? duplicateSearchPage - 1 : duplicateCurrentPage - 1)"
+                                        :disabled="isDuplicateSearchActive ? duplicateSearchPage === 1 : duplicateCurrentPage === 1"
+                                        class="px-2 py-1 rounded text-xs"
+                                        :class="(isDuplicateSearchActive ? duplicateSearchPage : duplicateCurrentPage) === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                    上一页
+                                </button>
+                                
+                                <!-- 页码按钮 -->
+                                <button v-for="p in duplicatePaginationRange" 
+                                        :key="p"
+                                        @click="p !== '...' && handleDuplicatePageChange(p)"
+                                        class="px-2 py-1 rounded text-xs min-w-[24px] text-center"
+                                        :class="{
+                                            'bg-blue-500 text-white': (isDuplicateSearchActive ? duplicateSearchPage : duplicateCurrentPage) === p,
+                                            'bg-white text-blue-500 hover:bg-blue-100': (isDuplicateSearchActive ? duplicateSearchPage : duplicateCurrentPage) !== p && p !== '...',
+                                            'bg-gray-100 text-gray-600 cursor-default': p === '...'
+                                        }"
+                                        :disabled="p === '...'">
+                                    {{ p }}
+                                </button>
+                                
+                                <!-- 下一页 -->
+                                <button @click="handleDuplicatePageChange(isDuplicateSearchActive ? duplicateSearchPage + 1 : duplicateCurrentPage + 1)"
+                                        :disabled="isDuplicateSearchActive ? duplicateSearchPage === duplicateSearchTotalPages : duplicateCurrentPage === duplicateTotalPages"
+                                        class="px-2 py-1 rounded text-xs"
+                                        :class="(isDuplicateSearchActive ? duplicateSearchPage === duplicateSearchTotalPages : duplicateCurrentPage === duplicateTotalPages) ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                    下一页
+                                </button>
+                            </div>
                         </div>
                     </div>
 

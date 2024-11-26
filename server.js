@@ -85,45 +85,45 @@ app.get('/api/tokens', async (req, res) => {
 // 获取重复代币列表
 app.get('/api/duplicate-tokens', async (req, res) => {
     try {
-        const cacheKey = 'duplicate_tokens';
+        const { query } = req.query;
+        const cacheKey = query ? `duplicate_tokens_search_${query}` : 'duplicate_tokens';
         
-        // 检查缓存
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            return res.json(cachedData);
+        // 构建基础查询条件
+        let baseQuery = { duplicateGroup: { $ne: null } };
+        
+        // 如果有搜索查询，添加搜索条件
+        if (query) {
+            baseQuery = {
+                ...baseQuery,
+                $or: [
+                    { symbol: new RegExp(query, 'i') },  // 使用模糊匹配而不是精确匹配
+                    { mint: new RegExp(query, 'i') }
+                ]
+            };
         }
 
-        const duplicateGroups = await Token.distinct('duplicateGroup', {
-            duplicateGroup: { $ne: null }
-        });
+        // 获取匹配的重复组号
+        const matchingTokens = await Token.find(baseQuery).lean();
+        const duplicateGroups = [...new Set(matchingTokens.map(token => token.duplicateGroup))];
 
         const duplicateTokensInfo = await Promise.all(duplicateGroups.map(async (groupNumber) => {
             const tokens = await Token.find({ duplicateGroup: groupNumber })
-                .sort({ timestamp: -1})
+                .sort({ timestamp: -1 })
                 .lean();
 
             if (tokens.length === 0) return null;
 
-            // 检查组内是否有完整的推特链接
-            const hasFullTwitterLink = tokens.some(token => 
-                token.duplicateType === 'twitter_status' && 
-                token.metadata?.twitter?.toLowerCase().includes('/status/')
+            // 获取最新和最早的时间戳
+            const latestTime = tokens[0].timestamp;
+            const previousTime = tokens[1]?.timestamp || null;
+            const firstTime = tokens[tokens.length - 1].timestamp;
+
+            // 检查是否有完整的推特链接
+            const twitterToken = tokens.find(t => 
+                t.metadata?.twitter?.includes('twitter.com/') || 
+                t.metadata?.twitter?.includes('x.com/')
             );
-
-            const timestamps = tokens.map(t => new Date(t.timestamp).getTime() + 8 * 60 * 60 * 1000);
-            const latestTime = Math.max(...timestamps);
-            const firstTime = Math.min(...timestamps);
-            
-            let previousTime = null;
-            if (timestamps.length > 1) {
-                const sortedTimes = [...timestamps].sort((a, b) => b - a);
-                previousTime = sortedTimes[1];
-            }
-
-            // 找到包含完整推特链接的代币
-            const twitterToken = hasFullTwitterLink ? 
-                tokens.find(t => t.duplicateType === 'twitter_status' && 
-                    t.metadata?.twitter?.toLowerCase().includes('/status/')) : null;
+            const hasFullTwitterLink = !!twitterToken;
 
             return {
                 groupNumber,
@@ -143,6 +143,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
             .filter(group => group !== null)
             .sort((a, b) => b.latestTime - a.latestTime);
 
+        // 设置缓存
         cache.set(cacheKey, validGroups);
         res.json(validGroups);
     } catch (error) {
