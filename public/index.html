@@ -87,6 +87,26 @@
                 <div class="overflow-auto" ref="tableContainer">
                     <div v-if="!loading && !error" class="bg-white rounded-lg shadow">
                         <table class="min-w-full">
+                            <!-- 修改表头样式 -->
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">
+                                        代币符号
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">
+                                        代币名称
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">
+                                        代币地址
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">
+                                        创建时间
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-sm font-medium text-gray-700 uppercase tracking-wider">
+                                        社交媒体
+                                    </th>
+                                </tr>
+                            </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 <tr v-for="token in tokens" 
                                     :key="token.mint"
