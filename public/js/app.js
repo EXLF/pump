@@ -44,7 +44,13 @@ createApp({
             labelPage: 1,
             labelPages: 1,
             labelTotal: 0,
-            scrollPosition: 0
+            scrollPosition: 0,
+            searchQuery: '',
+            searchResults: [],
+            searchTotal: 0,
+            searchPages: 1,
+            searchCurrentPage: 1,
+            isSearchActive: false,
         }
     },
     methods: {
@@ -191,13 +197,14 @@ createApp({
             }
         },
 
-        async changePage(page) {
-            if (page === this.currentPage) return;
-            this.currentPage = page;
-            
-            if (this.selectedDuplicateGroup) {
-                await this.fetchDuplicateGroupTokens();
+        async handlePageChange(page) {
+            if (this.isSearchActive) {
+                if (page === this.searchCurrentPage || page < 1 || page > this.searchPages) return;
+                this.searchCurrentPage = page;
+                await this.performSearch();
             } else {
+                if (page === this.currentPage || page < 1 || page > this.pages) return;
+                this.currentPage = page;
                 await this.fetchTokens();
             }
         },
@@ -630,6 +637,54 @@ createApp({
             } catch (error) {
                 console.error('获取重复组代币失败:', error);
             }
+        },
+
+        async performSearch() {
+            if (!this.searchQuery.trim()) {
+                return;
+            }
+
+            this.loading = true;
+            this.error = null;
+            
+            try {
+                const response = await axios.get('/api/tokens/search', {
+                    params: {
+                        query: this.searchQuery.trim(),
+                        page: this.searchCurrentPage
+                    }
+                });
+
+                this.searchResults = response.data.tokens;
+                this.searchTotal = response.data.total;
+                this.searchPages = response.data.pages;
+                this.isSearchActive = true;
+
+                // 停止自动刷新
+                if (this.polling) {
+                    clearInterval(this.polling);
+                    this.polling = null;
+                }
+            } catch (error) {
+                this.error = '搜索失败: ' + (error.response?.data?.error || error.message);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        clearSearch() {
+            this.searchQuery = '';
+            this.isSearchActive = false;
+            this.searchResults = [];
+            this.searchTotal = 0;
+            this.searchPages = 1;
+            this.searchCurrentPage = 1;
+            
+            // 恢复原始数据显示
+            this.fetchTokens();
+            
+            // 恢复自动刷新
+            this.startPolling();
         }
     },
     mounted() {
@@ -740,6 +795,46 @@ createApp({
             }
             
             return range;
+        },
+        searchPaginationRange() {
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = this.searchCurrentPage - leftOffset;
+            let end = this.searchCurrentPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), this.searchPages);
+                start = 1;
+            }
+            
+            if (end > this.searchPages) {
+                start = Math.max(start - (end - this.searchPages), 1);
+                end = this.searchPages;
+            }
+            
+            // 添加第一页
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            // 添加中间页码
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            // 添加最后一页
+            if (end < this.searchPages) {
+                if (end < this.searchPages - 1) range.push('...');
+                range.push(this.searchPages);
+            }
+            
+            return range;
+        },
+        displayedTokens() {
+            return this.isSearchActive ? this.searchResults : this.tokens;
         }
     }
 }).mount('#app'); 

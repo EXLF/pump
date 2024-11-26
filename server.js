@@ -252,6 +252,58 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
     }
 });
 
+// 新增搜索接口
+app.get('/api/tokens/search', async (req, res) => {
+    try {
+        const { query } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const limit = 11;
+        const skip = (page - 1) * limit;
+
+        if (!query) {
+            return res.json({
+                tokens: [],
+                total: 0,
+                page: 1,
+                pages: 0
+            });
+        }
+
+        // 构建查询条件，忽略大小写
+        const searchQuery = {
+            $or: [
+                { symbol: new RegExp(`^${query}$`, 'i') },  // 精确匹配符号，忽略大小写
+                { mint: new RegExp(`^${query}$`, 'i') }     // 精确匹配地址，忽略大小写
+            ]
+        };
+
+        // 并行执行查询
+        const [tokens, total] = await Promise.all([
+            Token.find(searchQuery)
+                .sort({ timestamp: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Token.countDocuments(searchQuery)
+        ]);
+
+        // 调整时间为 UTC+8
+        tokens.forEach(token => {
+            token.timestamp = new Date(new Date(token.timestamp).getTime() + 8 * 60 * 60 * 1000);
+        });
+
+        res.json({
+            tokens,
+            total,
+            page,
+            pages: Math.ceil(total / limit)
+        });
+    } catch (error) {
+        console.error('搜索失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(port, () => {
     console.log(`服务器运行在 http://localhost:${port}`);
 }); 

@@ -66,6 +66,39 @@
                     </ul>
                 </div>
 
+                <!-- 搜索框 -->
+                <div class="mb-4 flex items-center space-x-4">
+                    <div class="relative flex-1">
+                        <input type="text"
+                               v-model="searchQuery"
+                               @keyup.enter="performSearch"
+                               placeholder="输入代币符号或地址进行搜索"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <button @click="clearSearch" 
+                                v-if="isSearchActive"
+                                class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <button @click="performSearch"
+                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        搜索
+                    </button>
+                </div>
+
+                <!-- 搜索结果提示 -->
+                <div v-if="isSearchActive" class="mb-4 flex justify-between items-center">
+                    <div class="text-sm text-gray-600">
+                        搜索结果: 找到 {{ searchTotal }} 个匹配项
+                    </div>
+                    <button @click="clearSearch" 
+                            class="text-sm text-blue-500 hover:text-blue-600">
+                        返回所有代币
+                    </button>
+                </div>
+
                 <!-- 加载和错误提示 -->
                 <div class="mb-4">
                     <div v-if="loading" class="text-center py-4">
@@ -108,12 +141,9 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="token in tokens" 
+                                <tr v-for="token in displayedTokens" 
                                     :key="token.mint"
-                                    :class="[
-                                        getDuplicateColor(token),
-                                        'hover:bg-gray-50'
-                                    ]">
+                                    :class="{'bg-green-50': token.duplicateGroup !== null}">
                                     <!-- 代币符号 -->
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">
@@ -227,45 +257,48 @@
                     </div>
                 </div>
 
-                <!-- 分页控件 - 修改样式让它填充整个宽度 -->
-                <div class="mt-4 bg-white rounded-lg shadow p-4">
-                    <div class="flex justify-center items-center space-x-1">
-                        <!-- 上一页按钮 -->
-                        <button @click="currentPage > 1 && changePage(currentPage - 1)"
-                                :disabled="currentPage === 1"
+                <!-- 分页控件 -->
+                <div class="mt-4 flex justify-between items-center">
+                    <!-- 页码信息 -->
+                    <div class="text-sm text-gray-500">
+                        第 {{ isSearchActive ? searchCurrentPage : currentPage }} 页，
+                        共 {{ isSearchActive ? searchPages : pages }} 页，
+                        总计 {{ isSearchActive ? searchTotal : total }} 条记录
+                    </div>
+                    
+                    <!-- 分页按钮 -->
+                    <div class="flex space-x-2">
+                        <!-- 上一页 -->
+                        <button @click="handlePageChange(isSearchActive ? searchCurrentPage - 1 : currentPage - 1)"
+                                :disabled="isSearchActive ? searchCurrentPage === 1 : currentPage === 1"
                                 class="px-3 py-1 rounded text-sm"
-                                :class="currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                :class="(isSearchActive ? searchCurrentPage : currentPage) === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
                             上一页
                         </button>
-
+                        
                         <!-- 页码按钮 -->
-                        <button v-for="p in paginationRange" 
+                        <button v-for="p in isSearchActive ? searchPaginationRange : paginationRange" 
                                 :key="p"
-                                @click="p !== '...' && changePage(p)"
+                                @click="p !== '...' && handlePageChange(p)"
                                 :class="[
                                     'px-3 py-1 rounded text-sm min-w-[32px]',
                                     {
-                                        'bg-blue-500 text-white': currentPage === p,
-                                        'bg-white text-blue-500 hover:bg-blue-100': currentPage !== p && p !== '...',
+                                        'bg-blue-500 text-white': (isSearchActive ? searchCurrentPage : currentPage) === p,
+                                        'bg-white text-blue-500 hover:bg-blue-100': (isSearchActive ? searchCurrentPage : currentPage) !== p && p !== '...',
                                         'bg-gray-100 text-gray-600 cursor-default': p === '...'
                                     }
                                 ]"
                                 :disabled="p === '...'">
                             {{ p }}
                         </button>
-
                         
-                        <button @click="currentPage < pages && changePage(currentPage + 1)"
-                                :disabled="currentPage === pages"
+                        <!-- 下一页 -->
+                        <button @click="handlePageChange(isSearchActive ? searchCurrentPage + 1 : currentPage + 1)"
+                                :disabled="isSearchActive ? searchCurrentPage === searchPages : currentPage === pages"
                                 class="px-3 py-1 rounded text-sm"
-                                :class="currentPage === pages ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                :class="(isSearchActive ? searchCurrentPage === searchPages : currentPage === pages) ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
                             下一页
                         </button>
-                    </div>
-
-                    <!-- 添加页码 -->
-                    <div class="mt-2 text-center text-sm text-gray-500">
-                        第 {{ currentPage }} 页，共 {{ pages }} 页，总计 {{ total }} 条记录
                     </div>
                 </div>
             </div>
