@@ -196,10 +196,23 @@
                                     
                                     <!-- 代币地址 -->
                                     <td class="px-6 py-5 whitespace-nowrap">
-                                        <span @click="copyAddress(token.mint)"
-                                              class="text-base text-blue-600 hover:text-blue-900 cursor-pointer">
-                                            {{ formatAddress(token.mint) }}
-                                        </span>
+                                        <div class="flex items-center space-x-2">
+                                            <span @click="copyAddress(token.mint)"
+                                                  class="text-base text-blue-600 hover:text-blue-900 cursor-pointer">
+                                                {{ formatAddress(token.mint) }}
+                                            </span>
+                                            
+                                            <!-- GMGN 按钮 -->
+                                            <a :href="'https://gmgn.ai/sol/token/' + token.mint"
+                                               target="_blank"
+                                               class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                                               title="在 GMGN 中查看">
+                                                <img src="/images/gmgn.png" 
+                                                     alt="GMGN" 
+                                                     class="w-4 h-4 rounded-full"
+                                                     @error="$event.target.src='/images/gmgn-fallback.png'">
+                                            </a>
+                                        </div>
                                     </td>
                                     
                                     <!-- 创建时间 -->
