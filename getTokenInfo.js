@@ -129,22 +129,95 @@ async function fetchTokenData() {
     }
 }
 
-// 获取元数据
+// 定义 IPFS 网关列表
+const IPFS_GATEWAYS = [
+    'https://ipfs.io',
+    'https://pump.mypinata.cloud'
+];
+
+// 重试配置
+const MAX_RETRIES = 2;
+const TIMEOUT = 5000;
+
+// 辅助函数：创建带超时的请求
+const createRequest = (url, timeout = TIMEOUT) => {
+    return axios.get(url, {
+        timeout,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+    });
+};
+
+// 获取 IPFS 内容的函数
+async function fetchIPFSContent(ipfsPath, retryCount = 0) {
+    const requests = IPFS_GATEWAYS.map(gateway => {
+        const url = `${gateway}/ipfs/${ipfsPath}`;
+        return createRequest(url)
+            .then(response => ({
+                success: true,
+                data: response.data,
+                gateway
+            }))
+            .catch(() => ({
+                success: false,
+                gateway
+            }));
+    });
+
+    try {
+        // 同时发起所有请求，等待第一个成功的响应
+        const responses = await Promise.all(requests);
+        const successfulResponse = responses.find(r => r.success);
+
+        if (successfulResponse) {
+            console.log(`成功从网关 ${successfulResponse.gateway} 获取数据`);
+            return successfulResponse.data;
+        }
+
+        // 如果都失败了且还有重试次数，则重试
+        if (retryCount < MAX_RETRIES) {
+            console.log(`所有网关请求失败，进行第 ${retryCount + 1} 次重试`);
+            return await fetchIPFSContent(ipfsPath, retryCount + 1);
+        }
+
+        throw new Error('所有网关请求都失败了');
+
+    } catch (error) {
+        if (retryCount < MAX_RETRIES) {
+            console.log(`请求失败，进行第 ${retryCount + 1} 次重试`);
+            return await fetchIPFSContent(ipfsPath, retryCount + 1);
+        }
+        throw error;
+    }
+}
+
+// 处理元数据的函数
 async function fetchMetadata(metadataUrl) {
     try {
-        const response = await axios.get(metadataUrl, {
-            timeout: 5000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        // 从 URL 中提取 IPFS 路径
+        const ipfsPath = metadataUrl.replace(/^https:\/\/[^/]+\/ipfs\//, '');
+        
+        // 获取元数据
+        const metadata = await fetchIPFSContent(ipfsPath);
+        
+        // 如果元数据中包含 image 且是 IPFS 链接，也替换图片地址
+        if (metadata.image && metadata.image.includes('/ipfs/')) {
+            const imageIpfsPath = metadata.image.replace(/^https:\/\/[^/]+\/ipfs\//, '');
+            try {
+                // 获取图片内容（只验证可访问性，不需要实际内容）
+                await fetchIPFSContent(imageIpfsPath);
+                // 使用第一个可用的网关更新图片 URL
+                metadata.image = `${IPFS_GATEWAYS[0]}/ipfs/${imageIpfsPath}`;
+            } catch (error) {
+                console.error('图片 IPFS 内容获取失败:', error);
             }
-        });
-        return response.data;
+        }
+
+        return metadata;
+
     } catch (error) {
-        console.error(JSON.stringify({
-            error: 'Failed to fetch metadata',
-            url: metadataUrl,
-            message: error.message
-        }, null, 2));
+        console.error('获取元数据失败:', error);
         return null;
     }
 }
