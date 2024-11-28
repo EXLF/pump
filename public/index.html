@@ -19,7 +19,7 @@
                         <svg class="w-5 h-5 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                         </svg>
-                        <span>地址已复制到剪贴板</span>
+                        <span>复制成功</span>
                     </div>
                 </div>
             </transition>
@@ -181,14 +181,26 @@
                                                 </div>
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-base font-medium text-gray-900">{{ token.symbol }}</div>
+                                                <span 
+                                                    class="cursor-pointer" 
+                                                    @click="copyText(token.symbol)"
+                                                    :title="'点击复制: ' + token.symbol">
+                                                    {{ token.symbol }}
+                                                </span>
                                             </div>
                                         </div>
                                     </td>
                                     
                                     <!-- 名称 -->
                                     <td class="px-6 py-5 whitespace-nowrap">
-                                        <div class="text-base text-gray-900">{{ token.name }}</div>
+                                        <div class="text-base text-gray-900">
+                                            <span 
+                                                class="cursor-pointer" 
+                                                @click="copyText(token.name)"
+                                                :title="'点击复制: ' + token.name">
+                                                {{ token.name }}
+                                            </span>
+                                        </div>
                                     </td>
                                     
                                     <!-- 代币地址 -->
@@ -486,7 +498,7 @@
                                         :disabled="isDuplicateSearchActive ? duplicateSearchPage === 1 : duplicateCurrentPage === 1"
                                         class="px-2 py-1 rounded text-xs"
                                         :class="(isDuplicateSearchActive ? duplicateSearchPage : duplicateCurrentPage) === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
-                                    上一页
+                                    一页
                                 </button>
                                 
                                 <!-- 页码按钮 -->

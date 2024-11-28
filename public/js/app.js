@@ -770,6 +770,28 @@ createApp({
             
             // 直接使用已排序的数据
             return this.duplicateTokens.slice(start, end);
+        },
+
+        // 添加复制方法
+        async copyText(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                // 清除之前的定时器
+                if (this.copyMessageTimer) {
+                    clearTimeout(this.copyMessageTimer);
+                }
+                
+                // 显示复制成功提示
+                this.showCopyMessage = true;
+                
+                // 设置新定时器
+                this.copyMessageTimer = setTimeout(() => {
+                    this.showCopyMessage = false;
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+            }
         }
     },
     mounted() {
