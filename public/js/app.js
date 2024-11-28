@@ -272,25 +272,8 @@ createApp({
             }
         },
 
-        async copyAddress(address) {
-            try {
-                await navigator.clipboard.writeText(address);
-                
-                // 清除之前的定器
-                if (this.copyMessageTimer) {
-                    clearTimeout(this.copyMessageTimer);
-                }
-                
-                // 显示消息
-                this.showCopyMessage = true;
-                
-                // 设置新定时器
-                this.copyMessageTimer = setTimeout(() => {
-                    this.showCopyMessage = false;
-                }, 2000);
-            } catch (err) {
-                console.error('复制失败:', err);
-            }
+        copyAddress(address) {
+            this.copyText(address);
         },
         
         async fetchTwitterLabels() {
@@ -772,26 +755,46 @@ createApp({
             return this.duplicateTokens.slice(start, end);
         },
 
-        // 添加复制方法
+        // 统一的复制方法
         async copyText(text) {
             try {
-                await navigator.clipboard.writeText(text);
-                
-                // 清除之前的定时器
-                if (this.copyMessageTimer) {
-                    clearTimeout(this.copyMessageTimer);
+                // 主要复制方法
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                    this.showCopySuccess();
+                } else {
+                    // 后备复制方法
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-9999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        this.showCopySuccess();
+                    } catch (err) {
+                        console.error('复制失败:', err);
+                        throw new Error('复制失败');
+                    } finally {
+                        document.body.removeChild(textArea);
+                    }
                 }
-                
-                // 显示复制成功提示
-                this.showCopyMessage = true;
-                
-                // 设置新定时器
-                this.copyMessageTimer = setTimeout(() => {
-                    this.showCopyMessage = false;
-                }, 2000);
             } catch (err) {
                 console.error('复制失败:', err);
+                // 可以添加错误提示
             }
+        },
+
+        // 显示复制成功提示
+        showCopySuccess() {
+            this.showCopyMessage = true;
+            if (this.copyMessageTimer) {
+                clearTimeout(this.copyMessageTimer);
+            }
+            this.copyMessageTimer = setTimeout(() => {
+                this.showCopyMessage = false;
+            }, 2000);
         }
     },
     mounted() {
