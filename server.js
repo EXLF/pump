@@ -104,14 +104,26 @@ app.get('/api/duplicate-tokens', async (req, res) => {
 
         // 获取匹配的重复组号
         const matchingTokens = await Token.find(baseQuery).lean();
-        const duplicateGroups = [...new Set(matchingTokens.map(token => token.duplicateGroup))];
+        
+        // 过滤掉只有一个代币的组
+        const groupCounts = {};
+        matchingTokens.forEach(token => {
+            groupCounts[token.duplicateGroup] = (groupCounts[token.duplicateGroup] || 0) + 1;
+        });
+        
+        const validGroups = Object.entries(groupCounts)
+            .filter(([_, count]) => count > 1)
+            .map(([group]) => parseInt(group));
+
+        // 只返回有多个代币的组
+        const duplicateGroups = validGroups;
 
         const duplicateTokensInfo = await Promise.all(duplicateGroups.map(async (groupNumber) => {
             const tokens = await Token.find({ duplicateGroup: groupNumber })
                 .sort({ timestamp: -1 })
                 .lean();
 
-            if (tokens.length === 0) return null;
+            if (tokens.length < 2) return null; // 跳过只有一个代币的组
 
             // 获取最新和最早的时间戳，并统一加4小时调整时区
             const latestTime = new Date(tokens[0].timestamp).getTime() - 4 * 60 * 60 * 1000;
@@ -141,13 +153,10 @@ app.get('/api/duplicate-tokens', async (req, res) => {
             };
         }));
 
-        const validGroups = duplicateTokensInfo
-            .filter(group => group !== null)
-            .sort((a, b) => b.latestTime - a.latestTime);
-
-        // 设置缓存
-        cache.set(cacheKey, validGroups);
-        res.json(validGroups);
+        // 过滤掉空值并返回结果
+        const filteredResults = duplicateTokensInfo.filter(info => info !== null);
+        
+        res.json(filteredResults);
     } catch (error) {
         console.error('获取重复代币失败:', error);
         res.status(500).json({ error: error.message });

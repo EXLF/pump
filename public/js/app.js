@@ -40,7 +40,7 @@ createApp({
                 message: '',
                 error: false
             },
-            showLabelList: true, // 控制标签列表显示/隐藏
+            showLabelList: false, // 控制标签列表显示/隐藏
             labelPage: 1,
             labelPages: 1,
             labelTotal: 0,
@@ -141,18 +141,17 @@ createApp({
             // 如果代币没有重复组，返回空字符串（无背景色）
             if (!token.duplicateGroup) return '';
             
-            const typeColors = {
-                'symbol': 'bg-yellow-50',
-                'twitter_status': 'bg-green-50',
-                'twitter_account': 'bg-blue-50',
-                'website': 'bg-red-50',
-                'telegram': 'bg-purple-50',
-                'symbol_match': 'bg-yellow-50',
-                'name_match': 'bg-red-50',
-                'twitter_match': 'bg-blue-50'
-            };
-            
-            return typeColors[token.duplicateType] || 'bg-gray-50';
+            // 根据重复类型返回对应的背景色
+            switch (token.duplicateType) {
+                case 'twitter_status':
+                    return 'bg-green-50';  // 推特链接重复使用浅绿色
+                case 'symbol_match':
+                    return 'bg-yellow-50'; // 符号重复使用浅黄色
+                case 'name_match':
+                    return 'bg-red-50';    // 名称重复使用浅红色
+                default:
+                    return 'bg-gray-50';   // 默认使用浅灰色
+            }
         },
 
         retryFetch() {
@@ -162,13 +161,12 @@ createApp({
 
         async fetchDuplicateTokens() {
             try {
-                if (this.isDuplicateSearchActive) return;
-
                 const response = await axios.get('/api/duplicate-tokens');
-                this.duplicateTokens = response.data;
-                this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
+                this.duplicateTokens = response.data.sort((a, b) => 
+                    new Date(b.latestTime) - new Date(a.latestTime)
+                );
             } catch (error) {
-                console.error('获取重复代币失败:', error);
+                console.error('获取重复代币数据失败:', error);
             }
         },
 
@@ -378,7 +376,9 @@ createApp({
         },
         
         isFullTwitterLink(url) {
-            return url?.toLowerCase().includes('/status/');
+            if (!url) return false;
+            // 检查是否为完整推文链接（包含 status 或 i/web/status）
+            return url.includes('/status/') || url.includes('/i/web/status/');
         },
         
         isTwitterAccountLink(url) {
@@ -712,15 +712,11 @@ createApp({
                     }
                 });
                 
-                this.duplicateSearchResults = response.data;
+                this.duplicateSearchResults = response.data.sort((a, b) => 
+                    new Date(b.latestTime) - new Date(a.latestTime)
+                );
                 this.isDuplicateSearchActive = true;
-                this.duplicateSearchPage = 1; // 重置搜索结果页码
-                
-                // 停止轮询
-                if (this.duplicatePolling) {
-                    clearInterval(this.duplicatePolling);
-                    this.duplicatePolling = null;
-                }
+                this.duplicateSearchPage = 1;
             } catch (error) {
                 console.error('搜索重复代币失败:', error);
             } finally {
@@ -742,7 +738,9 @@ createApp({
         startDuplicatePolling() {
             this.fetchDuplicateTokens(); // 立即获取一次数据
             this.duplicatePolling = setInterval(() => {
-                this.fetchDuplicateTokens();
+                if (!this.isDuplicateSearchActive) {  // 只在非搜索状态下更新
+                    this.fetchDuplicateTokens();
+                }
             }, this.updateInterval);
         },
 
@@ -756,6 +754,21 @@ createApp({
                 this.duplicateCurrentPage = page;
             }
         },
+
+        displayedDuplicateTokens() {
+            // 获取数据源
+            let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
+            
+            // 确保再次排序，以保证最新数据在前
+            data = [...data].sort((a, b) => new Date(b.latestTime) - new Date(a.latestTime));
+            
+            // 分页处理
+            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+            const start = (currentPage - 1) * this.duplicatePageSize;
+            const end = start + this.duplicatePageSize;
+            
+            return data.slice(start, end);
+        }
     },
     mounted() {
         this.fetchTokens();
@@ -935,15 +948,22 @@ createApp({
             return this.isSearchActive ? this.searchResults : this.tokens;
         },
         displayedDuplicateTokens() {
-            if (this.isDuplicateSearchActive) {
-                const start = (this.duplicateSearchPage - 1) * this.duplicatePageSize;
-                const end = start + this.duplicatePageSize;
-                return this.duplicateSearchResults.slice(start, end);
-            } else {
-                const start = (this.duplicateCurrentPage - 1) * this.duplicatePageSize;
-                const end = start + this.duplicatePageSize;
-                return this.duplicateTokens.slice(start, end);
-            }
+            // 首先获取要显示的数据源（搜索结果或全部数据）
+            let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
+            
+            // 按照 latestTime 降序排序，这样最新的会在最前面
+            data = [...data].sort((a, b) => new Date(b.latestTime) - new Date(a.latestTime));
+            
+            // 计算分页
+            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+            const totalPages = Math.ceil(data.length / this.duplicatePageSize);
+            
+            // 从后往前计算页码，这样最新的数据会在第一页
+            const reversePage = totalPages - currentPage + 1;
+            const start = (reversePage - 1) * this.duplicatePageSize;
+            const end = start + this.duplicatePageSize;
+            
+            return data.slice(start, end);
         },
         // 计算当前使用的页码
         currentDuplicatePage() {

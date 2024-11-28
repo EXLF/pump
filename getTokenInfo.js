@@ -443,6 +443,37 @@ async function initializeTokenCheck() {
     }
 }
 
+// 添加清理孤立重复组的函数
+async function cleanupSingleTokenGroups() {
+    try {
+        // 获取所有重复组
+        const groups = await Token.distinct('duplicateGroup', { duplicateGroup: { $ne: null } });
+        
+        for (const group of groups) {
+            // 统计每个组的代币数量
+            const count = await Token.countDocuments({ duplicateGroup: group });
+            
+            // 如果组内只有一个代币，清除其重复标记
+            if (count === 1) {
+                await Token.updateMany(
+                    { duplicateGroup: group },
+                    { 
+                        $set: { 
+                            duplicateGroup: null,
+                            duplicateType: null
+                        }
+                    }
+                );
+            }
+        }
+    } catch (error) {
+        console.error('清理孤立重复组失败:', error);
+    }
+}
+
+// 定期执行清理任务（例如每小时执行一次）
+setInterval(cleanupSingleTokenGroups, 60 * 60 * 1000);
+
 // 在主函数中调用初始化检测
 async function main() {
     console.log(JSON.stringify({
