@@ -162,9 +162,18 @@ createApp({
         async fetchDuplicateTokens() {
             try {
                 const response = await axios.get('/api/duplicate-tokens');
+                // 对数据进行时间排序
                 this.duplicateTokens = response.data.sort((a, b) => 
                     new Date(b.latestTime) - new Date(a.latestTime)
                 );
+                
+                // 计算总页数
+                this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
+                
+                // 保持在当前页，除非是初始化或页码无效
+                if (!this.duplicateCurrentPage || this.duplicateCurrentPage > this.duplicateTotalPages) {
+                    this.duplicateCurrentPage = 1;  // 确保新数据显示在第一页
+                }
             } catch (error) {
                 console.error('获取重复代币数据失败:', error);
             }
@@ -756,18 +765,11 @@ createApp({
         },
 
         displayedDuplicateTokens() {
-            // 获取数据源
-            let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
-            
-            // 确保再次排序，以保证最新数据在前
-            data = [...data].sort((a, b) => new Date(b.latestTime) - new Date(a.latestTime));
-            
-            // 分页处理
-            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
-            const start = (currentPage - 1) * this.duplicatePageSize;
+            const start = (this.duplicateCurrentPage - 1) * this.duplicatePageSize;
             const end = start + this.duplicatePageSize;
             
-            return data.slice(start, end);
+            // 直接使用已排序的数据
+            return this.duplicateTokens.slice(start, end);
         }
     },
     mounted() {
