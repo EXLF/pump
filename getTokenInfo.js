@@ -370,14 +370,22 @@ async function initializeTokenCheck() {
     console.log('开始初始化检测...');
     
     try {
-        // 获取所有代币
-        const allTokens = await Token.find({}).lean();
-        console.log(`共找到 ${allTokens.length} 个代币待检测`);
+        // 只获取最新的12条代币数据
+        const recentTokens = await Token.find({})
+            .sort({ timestamp: -1 })  // 按时间倒序排序
+            .limit(12)                // 只取最新的12条
+            .lean();
+        
+        console.log(`获取最新的 ${recentTokens.length} 个代币进行检测`);
         
         // 用于存储已处理的组
         const processedGroups = new Set();
+        let groupCount = 0;  // 用于追踪已创建的组数
         
-        for (const token of allTokens) {
+        for (const token of recentTokens) {
+            // 如果已经达到12个组，退出循环
+            if (groupCount >= 12) break;
+            
             // 如果已经被分组，跳过
             if (token.duplicateGroup && processedGroups.has(token.duplicateGroup)) {
                 continue;
@@ -390,7 +398,10 @@ async function initializeTokenCheck() {
                 
                 // 查找可能的重复
                 const query = {
-                    _id: { $ne: token._id }
+                    _id: { $ne: token._id },
+                    timestamp: {
+                        $gte: new Date(Date.now() - 24 * 60 * 60 * 1000)  // 只查找最近24小时的数据
+                    }
                 };
                 
                 // 根据不同的检查类型设置查询条件
@@ -412,6 +423,7 @@ async function initializeTokenCheck() {
                     // 创建新的重复组
                     const groupNumber = await getNextGroupNumber();
                     processedGroups.add(groupNumber);
+                    groupCount++;  // 增加组计数
                     
                     // 更新原始代币
                     await Token.updateOne(
@@ -437,7 +449,7 @@ async function initializeTokenCheck() {
             }
         }
         
-        console.log('初始化检测完成');
+        console.log(`初始化检测完成，共处理 ${groupCount} 个重复组`);
     } catch (error) {
         console.error('初始化检测失败:', error);
     }
