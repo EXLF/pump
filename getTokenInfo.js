@@ -270,7 +270,7 @@ const duplicateChecks = [
 // 修改 findDuplicateGroup 函数
 async function findDuplicateGroup(tokenData) {
     const timeWindow = new Date(Date.now() - 1 * 60 * 60 * 1000); // 1小时时间窗口
-    let highestPriorityMatch = null;
+    let bestMatch = null;
 
     for (const check of duplicateChecks) {
         try {
@@ -283,6 +283,7 @@ async function findDuplicateGroup(tokenData) {
                 timestamp: { $gte: timeWindow }
             };
 
+            // 特殊处理推特链接匹配
             if (check.field === 'metadata.twitter') {
                 const formattedTwitter = value.toLowerCase().trim()
                     .replace('https://', '')
@@ -293,27 +294,50 @@ async function findDuplicateGroup(tokenData) {
                     continue;
                 }
             } else {
-                query[check.field] = new RegExp(`^${value}$`, 'i');
+                // 对于符号和名称匹配，确保完全匹配
+                query[check.field] = value.toLowerCase().trim();
             }
 
-            const duplicates = await Token.find(query).lean();
-            
-            // 如果找到匹配且优先级更高，则更新
-            if (duplicates.length > 0 && (!highestPriorityMatch || check.priority > highestPriorityMatch.priority)) {
-                const existingGroup = duplicates.find(d => d.duplicateGroup)?.duplicateGroup;
-                highestPriorityMatch = {
-                    group: existingGroup || await getNextGroupNumber(),
-                    type: check.type,
-                    priority: check.priority
-                };
-                break; // 找到高优先级匹配后立即退出
+            const duplicates = await Token.find(query)
+                .sort({ timestamp: -1 })
+                .limit(50)  // 限制匹配数量
+                .lean();
+
+            // 验证匹配的相似度
+            const validDuplicates = duplicates.filter(duplicate => {
+                const duplicateValue = check.field.split('.').reduce((obj, key) => obj?.[key], duplicate);
+                // 确保值完全相同（忽略大小写）
+                return duplicateValue?.toLowerCase().trim() === value.toLowerCase().trim();
+            });
+
+            if (validDuplicates.length > 0) {
+                // 找到现有组中优先级最高的
+                const existingGroup = validDuplicates.find(d => 
+                    d.duplicateGroup && d.duplicateType === check.type
+                );
+
+                if (existingGroup) {
+                    bestMatch = {
+                        group: existingGroup.duplicateGroup,
+                        type: check.type,
+                        priority: check.priority
+                    };
+                    break;  // 找到精确匹配后立即退出
+                } else if (!bestMatch) {
+                    // 如果没有现有组，创建新组
+                    bestMatch = {
+                        group: await getNextGroupNumber(),
+                        type: check.type,
+                        priority: check.priority
+                    };
+                }
             }
         } catch (error) {
             console.error(`检查失败 ${check.type}:`, error);
         }
     }
 
-    return highestPriorityMatch;
+    return bestMatch;
 }
 
 // 改进置信度计算
@@ -483,8 +507,70 @@ async function cleanupSingleTokenGroups() {
     }
 }
 
-// 定期执行清理任务（例如每小时执行一次）
-setInterval(cleanupSingleTokenGroups, 60 * 60 * 1000);
+// 添加新的清理函数
+async function splitInvalidGroups() {
+    try {
+        // 获取所有重复组
+        const groups = await Token.distinct('duplicateGroup', { duplicateGroup: { $ne: null } });
+        
+        for (const group of groups) {
+            // 获取组内所有代币
+            const groupTokens = await Token.find({ duplicateGroup: group }).lean();
+            
+            // 如果组内代币少于2个，跳过
+            if (groupTokens.length < 2) continue;
+            
+            // 按照duplicateType分组
+            const typeGroups = {};
+            groupTokens.forEach(token => {
+                if (!typeGroups[token.duplicateType]) {
+                    typeGroups[token.duplicateType] = [];
+                }
+                typeGroups[token.duplicateType].push(token);
+            });
+            
+            // 检查每种类型的代币是否都相互匹配
+            for (const type in typeGroups) {
+                const tokens = typeGroups[type];
+                if (tokens.length < 2) continue;
+                
+                // 验证组内代币是否真的相互匹配
+                const needsSplit = tokens.some((token1, i) => {
+                    return tokens.some((token2, j) => {
+                        if (i >= j) return false;
+                        
+                        // 根据类型验证匹配
+                        switch (type) {
+                            case 'twitter_status':
+                                return !token1.metadata?.twitter || !token2.metadata?.twitter ||
+                                       token1.metadata.twitter.toLowerCase() !== token2.metadata.twitter.toLowerCase();
+                            case 'symbol_match':
+                                return token1.symbol.toLowerCase() !== token2.symbol.toLowerCase();
+                            case 'name_match':
+                                return token1.name.toLowerCase() !== token2.name.toLowerCase();
+                            default:
+                                return true;
+                        }
+                    });
+                });
+                
+                if (needsSplit) {
+                    // 为不匹配的代币创建新的组
+                    const newGroupNumber = await getNextGroupNumber();
+                    await Token.updateMany(
+                        { _id: { $in: tokens.map(t => t._id) } },
+                        { duplicateGroup: newGroupNumber }
+                    );
+                }
+            }
+        }
+    } catch (error) {
+        console.error('分割无效组失败:', error);
+    }
+}
+
+// 定期执行清理任务
+setInterval(splitInvalidGroups, 30 * 60 * 1000); // 每30分钟执行一次
 
 // 在主函数中调用初始化检测
 async function main() {
