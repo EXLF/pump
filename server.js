@@ -4,14 +4,19 @@ const cors = require('cors');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 10 }); // 10秒缓存
 
-// 添加活跃用户统计
-let activeUsers = new Set(); // 存储活跃用户的 IP
-const timeout = 5 * 60 * 1000; // 5分钟超时
+// 使用 Map 存储用户IP和最后活跃时间
+const activeUsers = new Map();
+const TIMEOUT = 5 * 60 * 1000; // 5分钟超时
 
-// 定期清理过期的 IP
+// 定期清理过期用户
 setInterval(() => {
-    activeUsers.clear();
-}, timeout);
+    const now = Date.now();
+    for (const [ip, lastActive] of activeUsers) {
+        if (now - lastActive > TIMEOUT) {
+            activeUsers.delete(ip);
+        }
+    }
+}, 60 * 1000); // 每分钟检查一次
 
 const app = express();
 const port = 3000;
@@ -20,15 +25,23 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// 添加用户统计中间件
+// 中间件
 app.use((req, res, next) => {
     const clientIP = req.ip || req.connection.remoteAddress;
-    activeUsers.add(clientIP);
+    activeUsers.set(clientIP, Date.now());
     next();
 });
 
-// 添加获取在线用户数的接口
+// API接口
 app.get('/api/online-users', (req, res) => {
+    // 清理过期用户
+    const now = Date.now();
+    for (const [ip, lastActive] of activeUsers) {
+        if (now - lastActive > TIMEOUT) {
+            activeUsers.delete(ip);
+        }
+    }
+    
     res.json({ 
         onlineUsers: activeUsers.size,
         lastUpdate: new Date().toISOString()
