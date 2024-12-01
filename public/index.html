@@ -24,12 +24,14 @@
                 </div>
             </transition>
         </div>
-        <header class="mb-8 flex justify-between items-center">
-            <div>
+        <header class="mb-8">
+            <div class="flex justify-between items-center">
+                <!-- 左侧：标题 -->
                 <h1 class="text-3xl font-bold text-gray-800">Solana 金狗监控</h1>
-                <div class="flex items-center gap-4 mt-1">
-                    <p class="text-sm text-gray-500">当前在线: {{ onlineUsers }} 人</p>
-                    
+
+                <!-- 中间：在线人数和TG群 -->
+                <div class="flex items-center gap-4">
+                    <p class="text-lg text-gray-500">当前在线: {{ onlineUsers }} 人</p>
                     <a href="https://t.me/+XTLZdJ4vVU83Nzk9" 
                        target="_blank"
                        class="inline-flex items-center px-3 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors text-sm">
@@ -38,10 +40,41 @@
                         </svg>
                         加入TG群
                     </a>
+                    
                 </div>
-            </div>
-            <div class="text-sm text-gray-500">
-                最后更新: {{ lastUpdate }}
+                <div class="text-sm text-gray-500">
+                    最后更新: {{ lastUpdate }}
+                </div>
+                <!-- 右侧：打狗机器人 -->
+                <div class="flex flex-col items-end gap-2">
+                    <!-- 机器人说明 -->
+                    <div class="text-sm text-gray-600 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>使用打狗机器人，抢先一步买卖</span>
+                    </div>
+
+                    <!-- 机器人按钮组 -->
+                    <div class="flex items-center gap-2">
+                        <!-- Pepe Bot -->
+                        <a href="https://t.me/pepeboost_sol07_bot?start=ref_0d8l4n"
+                           target="_blank" 
+                           class="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm shadow-sm">
+                            <img src="/images/pepe-icon.png" class="w-5 h-5 mr-2" alt="Pepe Bot">
+                            Pepe Bot
+                        </a>
+
+                        <!-- Dogee Bot -->
+                        <a href="https://t.me/dogeebot_bot?start=invite-17330534430421"
+                           target="_blank"
+                           class="inline-flex items-center px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm shadow-sm">
+                            <img src="/images/dogee-icon.png" class="w-5 h-5 mr-2" alt="Dogee Bot">
+                            Dogee Bot
+                        </a>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -320,7 +353,7 @@
 
                 <!-- 分页控件 -->
                 <div class="mt-4 flex justify-between items-center">
-                    <!-- 页码信息 -->
+                    <!-- 页码息 -->
                     <div class="text-sm text-gray-500">
                         第 {{ isSearchActive ? searchCurrentPage : currentPage }} 页，
                         共 {{ isSearchActive ? searchPages : pages }} 页，
