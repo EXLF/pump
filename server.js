@@ -4,12 +4,36 @@ const cors = require('cors');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ stdTTL: 10 }); // 10秒缓存
 
+// 添加活跃用户统计
+let activeUsers = new Set(); // 存储活跃用户的 IP
+const timeout = 5 * 60 * 1000; // 5分钟超时
+
+// 定期清理过期的 IP
+setInterval(() => {
+    activeUsers.clear();
+}, timeout);
+
 const app = express();
 const port = 3000;
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// 添加用户统计中间件
+app.use((req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress;
+    activeUsers.add(clientIP);
+    next();
+});
+
+// 添加获取在线用户数的接口
+app.get('/api/online-users', (req, res) => {
+    res.json({ 
+        onlineUsers: activeUsers.size,
+        lastUpdate: new Date().toISOString()
+    });
+});
 
 // 添加一个辅助函数来标准化推特URL
 function normalizeTwitterUrl(url) {

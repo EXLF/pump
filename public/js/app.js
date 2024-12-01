@@ -57,6 +57,8 @@ createApp({
             duplicatePolling: null,
             duplicateSearchPage: 1,
             duplicateSearchTotalPages: 1,
+            onlineUsers: 0,
+            onlineUsersPolling: null,
         }
     },
     methods: {
@@ -795,6 +797,24 @@ createApp({
             this.copyMessageTimer = setTimeout(() => {
                 this.showCopyMessage = false;
             }, 2000);
+        },
+
+        // 获取在线用户数
+        async fetchOnlineUsers() {
+            try {
+                const response = await axios.get('/api/online-users');
+                this.onlineUsers = response.data.onlineUsers;
+            } catch (error) {
+                console.error('获取在线用户数失败:', error);
+            }
+        },
+
+        // 开始轮询在线用户数
+        startOnlineUsersPolling() {
+            this.fetchOnlineUsers(); // 立即获取一次
+            this.onlineUsersPolling = setInterval(() => {
+                this.fetchOnlineUsers();
+            }, 30000); // 每30秒更新一次
         }
     },
     mounted() {
@@ -815,6 +835,7 @@ createApp({
         this.fetchData();
         this.startPolling();
         this.startDuplicatePolling();
+        this.startOnlineUsersPolling();
         window.addEventListener('scroll', this.handleScroll);
         // 恢复上次的滚动位置
         const savedPosition = sessionStorage.getItem('scrollPosition');
@@ -834,6 +855,9 @@ createApp({
         }
         if (this.duplicatePolling) {
             clearInterval(this.duplicatePolling);
+        }
+        if (this.onlineUsersPolling) {
+            clearInterval(this.onlineUsersPolling);
         }
         window.removeEventListener('scroll', this.handleScroll);
         if (this.scrollTimeout) {
