@@ -184,6 +184,17 @@ createApp({
         async fetchTokens(forceRefresh = false) {
             if (this.loading && !forceRefresh) return;
             
+            const cacheKey = `tokens_${this.currentPage}_${this.activeTab}`;
+            const cachedData = sessionStorage.getItem(cacheKey);
+            
+            if (cachedData && !forceRefresh) {
+                const parsed = JSON.parse(cachedData);
+                if (Date.now() - parsed.timestamp < 5000) { // 5秒缓存
+                    this.updateTokensData(parsed.data);
+                    return;
+                }
+            }
+
             this.loading = true;
             this.error = null;
             
@@ -215,6 +226,12 @@ createApp({
             } finally {
                 this.loading = false;
             }
+
+            // 缓存新数据
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+                data: response.data,
+                timestamp: Date.now()
+            }));
         },
 
         async handlePageChange(page) {
@@ -330,7 +347,7 @@ createApp({
                      .replace('http://', '')
                      .replace('x.com/', '')
                      .replace('twitter.com/', '')
-                     .split('/')[0];  // 只保留���户名部分
+                     .split('/')[0];  // 只保留户名部分
         },
         
         getTwitterLabel(url) {
@@ -799,7 +816,7 @@ createApp({
             }, 2000);
         },
 
-        // 获取在线用户数
+        // 获取在线用��数
         async fetchOnlineUsers() {
             try {
                 const response = await axios.get('/api/online-users');
@@ -815,6 +832,27 @@ createApp({
             this.onlineUsersPolling = setInterval(() => {
                 this.fetchOnlineUsers();
             }, 30000); // 每30秒更新一次
+        },
+
+        connectWebSocket() {
+            const socket = new WebSocket(`ws://${window.location.host}`);
+            
+            socket.addEventListener('open', () => {
+                console.log('WebSocket 连接已建立');
+            });
+
+            socket.addEventListener('message', (event) => {
+                const { type, data } = JSON.parse(event.data);
+                if (type === 'tokensUpdate') {
+                    this.tokens = data;
+                    this.lastUpdate = new Date().toLocaleString();
+                }
+            });
+
+            socket.addEventListener('close', () => {
+                console.log('WebSocket 连接已关闭，尝试重新连接...');
+                setTimeout(() => this.connectWebSocket(), 5000);
+            });
         }
     },
     mounted() {
@@ -842,6 +880,8 @@ createApp({
         if (savedPosition) {
             window.scrollTo(0, parseInt(savedPosition));
         }
+
+        this.connectWebSocket();
     },
     beforeUnmount() {
         if (this.refreshInterval) {

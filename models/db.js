@@ -1,9 +1,15 @@
 const mongoose = require('mongoose');
 
-// 简化连接配置
+// 优化数据库连接配置
 mongoose.connect('mongodb://localhost:27017/pump_tokens', {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    // 使用新的连接池配置
+    maxPoolSize: 20,
+    // 添加写入关注点配置
+    w: 'majority',
+    // 添加读取偏好
+    readPreference: 'secondaryPreferred'
 })
 .then(() => {
     console.log('MongoDB连接成功');
@@ -43,13 +49,12 @@ const tokenSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// 添加索引
-tokenSchema.index({ timestamp: -1 }); // 时间戳索引
+// 优化索引
+tokenSchema.index({ timestamp: -1, duplicateGroup: 1 }); // 复合索引
 tokenSchema.index({ mint: 1 }, { unique: true }); // mint地址唯一索引
-tokenSchema.index({ symbol: 1 }); // 符号索引
+tokenSchema.index({ symbol: 1, duplicateGroup: 1 }); // 复合索引
 tokenSchema.index({ name: 1 }); // 名称索引
 tokenSchema.index({ 'metadata.twitter': 1 }); // twitter链接索引
-tokenSchema.index({ duplicateGroup: 1 }); // 重复组索引
 
 const Token = mongoose.model('Token', tokenSchema);
 

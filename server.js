@@ -2,12 +2,18 @@ const express = require('express');
 const { Token, TwitterLabel } = require('./models/db');
 const cors = require('cors');
 const NodeCache = require('node-cache');
-const cache = new NodeCache({ stdTTL: 10 }); // 10秒缓存
+const cache = new NodeCache({ 
+    stdTTL: 5,
+    checkperiod: 10,
+    maxKeys: 1000,
+    useClones: false // 禁用克隆以提高性能
+}); // 5秒缓存
+const { initializeWebSocket } = require('./websocket');
 
 // 使用 Map 存储用户IP和最后活跃时间
 const activeUsers = new Map();
 const TIMEOUT = 5 * 60 * 1000; // 5分钟超时
-const BASE_ONLINE_USERS = 20; // 基础在线人数
+const BASE_ONLINE_USERS = 0; // 基础在线人数
 
 // 定期清理过期用户
 setInterval(() => {
@@ -17,7 +23,7 @@ setInterval(() => {
             activeUsers.delete(ip);
         }
     }
-}, 60 * 1000); // 每分钟检查一次
+}, 10 * 1000); // 每10秒检查一次
 
 const app = express();
 const port = 3000;
@@ -32,6 +38,24 @@ app.use((req, res, next) => {
     activeUsers.set(clientIP, Date.now());
     next();
 });
+
+// 添加缓存中间件
+const cacheMiddleware = (duration) => (req, res, next) => {
+    const key = `__express__${req.originalUrl}`;
+    const cachedResponse = cache.get(key);
+
+    if (cachedResponse) {
+        res.json(cachedResponse);
+        return;
+    }
+
+    res.originalJson = res.json;
+    res.json = (body) => {
+        cache.set(key, body, duration);
+        res.originalJson(body);
+    };
+    next();
+};
 
 // API接口
 app.get('/api/online-users', (req, res) => {
@@ -60,7 +84,7 @@ function normalizeTwitterUrl(url) {
 }
 
 // 获取代币列表
-app.get('/api/tokens', async (req, res) => {
+app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const duplicatesOnly = req.query.duplicatesOnly === 'true';
@@ -88,13 +112,23 @@ app.get('/api/tokens', async (req, res) => {
             query.duplicateGroup = { $ne: null };
         }
 
-        // 使用Promise.all并行执行查询
+        // 使用投影只获取需要的字段
+        const projection = {
+            name: 1,
+            symbol: 1,
+            mint: 1,
+            timestamp: 1,
+            metadata: 1,
+            duplicateGroup: 1,
+            duplicateType: 1
+        };
+
         const [tokens, total] = await Promise.all([
-            Token.find(query)
+            Token.find(query, projection)
+                .lean()
                 .sort({ timestamp: -1 })
                 .skip(skip)
-                .limit(limit)
-                .lean(),
+                .limit(limit),
             Token.countDocuments(query)
         ]);
 
@@ -297,7 +331,7 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        console.error('获取重复组代币失败:', error);
+        console.error('获取重复组币失败:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -354,6 +388,32 @@ app.get('/api/tokens/search', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
+// 每8小时更新一次duplicateGroup字段最多的值为null
+setInterval(async () => {
+    try {
+        const result = await Token.aggregate([
+            { $match: { duplicateGroup: { $ne: null } } },
+            { $group: { _id: "$duplicateGroup", count: { $sum: 1 } } },
+            { $sort: { count: -1 } },
+            { $limit: 1 }
+        ]);
+
+        if (result.length > 0) {
+            const mostFrequentGroup = result[0]._id;
+            await Token.updateMany(
+                { duplicateGroup: mostFrequentGroup },
+                { $set: { duplicateGroup: null } }
+            );
+            console.log(`重置了组 ${mostFrequentGroup} 的 duplicateGroup 字段`);
+        }
+    } catch (error) {
+        console.error('更新 duplicateGroup 失败:', error);
+    }
+}, 8 * 60 * 60 * 1000); // 每8小时执行一次
+
+const server = app.listen(port, () => {
     console.log(`服务器运行在 http://localhost:${port}`);
-}); 
+});
+
+// 初始化 WebSocket
+initializeWebSocket(server); 
