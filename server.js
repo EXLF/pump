@@ -7,6 +7,7 @@ const cache = new NodeCache({ stdTTL: 10 }); // 10秒缓存
 // 使用 Map 存储用户IP和最后活跃时间
 const activeUsers = new Map();
 const TIMEOUT = 5 * 60 * 1000; // 5分钟超时
+const BASE_ONLINE_USERS = 20; // 基础在线人数
 
 // 定期清理过期用户
 setInterval(() => {
@@ -43,7 +44,7 @@ app.get('/api/online-users', (req, res) => {
     }
     
     res.json({ 
-        onlineUsers: activeUsers.size,
+        onlineUsers: BASE_ONLINE_USERS + activeUsers.size, // 加上基础在线人数
         lastUpdate: new Date().toISOString()
     });
 });

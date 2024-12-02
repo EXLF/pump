@@ -57,7 +57,7 @@ createApp({
             duplicatePolling: null,
             duplicateSearchPage: 1,
             duplicateSearchTotalPages: 1,
-            onlineUsers: 0,
+            onlineUsers: 20,
             onlineUsersPolling: null,
         }
     },
@@ -330,7 +330,7 @@ createApp({
                      .replace('http://', '')
                      .replace('x.com/', '')
                      .replace('twitter.com/', '')
-                     .split('/')[0];  // 只保留用户名部分
+                     .split('/')[0];  // 只保留���户名部分
         },
         
         getTwitterLabel(url) {
