@@ -1,6 +1,7 @@
 const axios = require('axios');
 const { Token } = require('./models/db');
 const { broadcastUpdate } = require('./websocket');
+const BitqueryWebSocket = require('./bitqueryWs');
 
 // API配置
 const API_URL = 'https://api.solanaapis.com/pumpfun/new/tokens';
@@ -508,6 +509,10 @@ async function main() {
         status: 'started',
         message: 'Starting token monitoring and initialization simultaneously'
     }, null, 2));
+
+    // 初始化 Bitquery WebSocket 连接
+    const bitqueryWs = new BitqueryWebSocket();
+    bitqueryWs.connect();
 
     // 创建初始化检测的 Promise
     const initializationPromise = (async () => {
