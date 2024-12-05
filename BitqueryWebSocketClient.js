@@ -30,7 +30,6 @@ class BitqueryWebSocketClient {
         console.log(currentKey)
         this.ws = new WebSocket(
             `wss://streaming.bitquery.io/eap?token=${currentKey}`,
-            // `wss://streaming.bitquery.io/eap?token=ory_at_-JFdtKNUUtMlpSMJPcxg-OzI6I9FsyWLc_pUrj-ZyeY.O8cPOUX4Fw9rY3CV-guoNlp4WKbmVnJ98Hx6sBnXMh4`,
             ["graphql-ws"]
         );
 
