@@ -1,5 +1,6 @@
 const express = require('express');
-const { Token, TwitterLabel } = require('./models/db');
+const apiKeysRouter = require('./routes/apiKeys');
+const { Token, TwitterLabel, ApiKey } = require('./models/db');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ 
@@ -9,6 +10,15 @@ const cache = new NodeCache({
     useClones: false // 禁用克隆以提高性能
 }); // 5秒缓存
 const { initializeWebSocket } = require('./websocket');
+const mongoose = require('mongoose');
+
+// 连接到 MongoDB
+mongoose.connect('mongodb://localhost:27017/your-database-name', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log('MongoDB连接成功'))
+.catch(err => console.error('MongoDB连接失败:', err));
 
 // 使用 Map 存储用户IP和最后活跃时间
 const activeUsers = new Map();
@@ -31,6 +41,10 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+app.use(express.json());
+app.use('/api/keys', apiKeysRouter);
+app.use('/admin', express.static('public/admin'));
 
 // 中间件
 app.use((req, res, next) => {
@@ -132,9 +146,9 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
             Token.countDocuments(query)
         ]);
 
-        // 调整时间为 UTC-4
+        // 调整时间为 UTC+8
         tokens.forEach(token => {
-            token.timestamp = new Date(new Date(token.timestamp).getTime() - 4 * 60 * 60 * 1000);
+            token.timestamp = new Date(new Date(token.timestamp).getTime());
         });
 
         const result = {
@@ -316,9 +330,9 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
             Token.countDocuments({ duplicateGroup: groupNumber })
         ]);
 
-        // 调整时间为 UTC-4
+        // 调整时间为 UTC+8
         tokens.forEach(token => {
-            token.timestamp = new Date(new Date(token.timestamp).getTime() - 4 * 60 * 60 * 1000);
+            token.timestamp = new Date(new Date(token.timestamp).getTime());
         });
 
         // 返回分页数据
@@ -335,6 +349,11 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+app.use(express.json());
+app.use('/api/keys', apiKeysRouter);
+app.use('/admin', express.static('public/admin'));
+
 
 // 新增搜索接口
 app.get('/api/tokens/search', async (req, res) => {
@@ -371,9 +390,9 @@ app.get('/api/tokens/search', async (req, res) => {
             Token.countDocuments(searchQuery)
         ]);
 
-        // 调整时间为 UTC-4
+        // 调整时间为 UTC+8
         tokens.forEach(token => {
-            token.timestamp = new Date(new Date(token.timestamp).getTime() - 4 * 60 * 60 * 1000);
+            token.timestamp = new Date(new Date(token.timestamp).getTime());
         });
 
         res.json({

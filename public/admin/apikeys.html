@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Key 管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-2xl font-bold mb-6">API Key 管理</h1>
+        
+        <!-- 添加新 Key 的表单 -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-xl font-semibold mb-4">添加新 API Key</h2>
+            <form id="addKeyForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">API Key</label>
+                    <input type="text" id="keyInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">描述</label>
+                    <input type="text" id="descriptionInput" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                    添加
+                </button>
+            </form>
+        </div>
+
+        <!-- API Keys 列表 -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">现有 API Keys</h2>
+            <div id="keysList" class="space-y-4">
+                <!-- Keys will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Keys 管理脚本
+        const apiKeysManager = {
+            async loadKeys() {
+                try {
+                    const response = await fetch('/api/keys');
+                    const keys = await response.json();
+                    this.displayKeys(keys);
+                } catch (error) {
+                    console.error('加载 API Keys 失败:', error);
+                }
+            },
+
+            displayKeys(keys) {
+                const keysList = document.getElementById('keysList');
+                keysList.innerHTML = keys.map(key => `
+                    <div class="border p-4 rounded-md flex justify-between items-center">
+                        <div>
+                            <p class="font-medium">${key.description || '无描述'}</p>
+                            <p class="text-sm text-gray-500">状态: ${key.isActive ? '活跃' : '禁用'}</p>
+                        </div>
+                        <div class="space-x-2">
+                            <button onclick="apiKeysManager.toggleKey('${key._id}', ${!key.isActive})" 
+                                    class="px-3 py-1 rounded-md ${key.isActive ? 'bg-red-500' : 'bg-green-500'} text-white">
+                                ${key.isActive ? '禁用' : '启用'}
+                            </button>
+                            <button onclick="apiKeysManager.deleteKey('${key._id}')" 
+                                    class="px-3 py-1 bg-red-500 text-white rounded-md">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            },
+
+            async addKey(event) {
+                event.preventDefault();
+                const key = document.getElementById('keyInput').value.trim();
+                const description = document.getElementById('descriptionInput').value.trim();
+
+                try {
+                    const response = await fetch('/api/keys', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ key, description }),
+                    });
+
+                    if (response.ok) {
+                        document.getElementById('addKeyForm').reset();
+                        this.loadKeys();
+                    } else {
+                        console.error('添加 API Key 失败:', await response.json());
+                    }
+                } catch (error) {
+                    console.error('添加 API Key 失败:', error);
+                }
+            },
+
+            async toggleKey(id, isActive) {
+                try {
+                    await fetch(`/api/keys/${id}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ isActive }),
+                    });
+                    this.loadKeys();
+                } catch (error) {
+                    console.error('更新 API Key 状态失败:', error);
+                }
+            },
+
+            async deleteKey(id) {
+                if (!confirm('确定要删除这个 API Key 吗？')) return;
+
+                try {
+                    await fetch(`/api/keys/${id}`, {
+                        method: 'DELETE',
+                    });
+                    this.loadKeys();
+                } catch (error) {
+                    console.error('删除 API Key 失败:', error);
+                }
+            },
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            apiKeysManager.loadKeys();
+            document.getElementById('addKeyForm').addEventListener('submit', (e) => apiKeysManager.addKey(e));
+        });
+    </script>
+</body>
+</html> 
