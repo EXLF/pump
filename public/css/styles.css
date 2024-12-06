@@ -1,113 +1,48 @@
-/* 消息提示动画 */
-.transition-opacity {
-    transition: opacity 0.3s ease-in-out;
+/* Dev代币高亮效果 */
+.dev-token-highlight {
+    background: linear-gradient(
+        110deg,
+        rgba(98, 171, 255, 0.3) 0%,    /* 蓝色 */
+        rgba(70, 50, 255, 0.3) 25%,   /* 紫色 */
+        rgba(255, 78, 166, 0.3) 50%,    /* 粉色 */
+        rgba(143, 106, 255, 0.3) 75%,   /* 紫色 */
+        rgba(248, 255, 50, 0.3) 100%   /* 青色 */
+    );
+    background-size: 200% 100%;
+    animation: gradient 3s linear infinite;
 }
 
-.opacity-0 {
-    opacity: 0;
-}
-
-/* 添加动画效果 */
-.transition-all {
-    transition: all 0.3s ease-in-out;
-}
-
-/* 脉冲动画 */
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-.animate-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* 固定侧边栏 */
-.sticky {
-    position: sticky;
-    top: 1rem;
-}
-
-/* 添加消息提示动画 */
-.slide-fade-enter-active {
-    transition: all 0.3s ease;
-}
-
-.slide-fade-leave-active {
-    transition: all 0.3s ease;
-}
-
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-    transform: translateY(-20px);
-    opacity: 0;
-}
-
-/* 添加点击效果 */
-.cursor-pointer {
-    cursor: pointer;
-    user-select: none;
-}
-
-/* 修改消息提示动画和样式 */
-.message-popup {
-    animation: fadeInDown 0.3s ease-out;
-}
-
-@keyframes fadeInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
+/* 背景渐变动画 */
+@keyframes gradient {
+    0% {
+        background-position: 0% 50%;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    100% {
+        background-position: 200% 50%;
     }
 }
 
-/* 添加自适应布局相关样式 */
-.sticky-container {
-    height: calc(100vh - 5rem); /* 减去顶部导航栏的高度 */
-    position: sticky;
-    top: 5rem;
+/* 鼠标悬停效果 */
+.dev-token-highlight:hover {
+    background: linear-gradient(
+        110deg,
+        rgba(98, 171, 255, 0.4) 0%,    /* 蓝色 */
+        rgba(79, 255, 108, 0.4) 25%,   /* 紫色 */
+        rgba(255, 78, 166, 0.4) 50%,    /* 粉色 */
+        rgba(143, 106, 255, 0.4) 75%,   /* 紫色 */
+        rgba(52, 255, 228, 0.4) 100%   /* 青色 */
+    );
 }
 
-/* 表格列宽控制 */
-.table-fixed {
-    table-layout: fixed;
+/* Dev别名金色字体效果 */
+.dev-name-highlight {
+    color: #FFD700 !important;  /* 添加!important确保优先级 */
+    font-weight: 600;
+    text-shadow: 0 0 1px rgba(255, 215, 0, 0.3);
 }
 
-/* 确保内容不会溢出单元格 */
-.whitespace-nowrap {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* 添加响应式布局支持 */
-@media (max-width: 1280px) {
-    .flex.gap-8 {
-        gap: 1rem;
-    }
-    
-    .w-80 {
-        width: 18rem;
-    }
-}
-
-@media (max-width: 1024px) {
-    .flex.gap-8 {
-        flex-direction: column;
-    }
-    
-    .w-80 {
-        width: 100%;
-    }
-    
-    .sticky-container {
-        height: auto;
-        position: static;
-    }
+/* 确保样式不被覆盖 */
+td .dev-name-highlight {
+    color: #FFD700 !important;
 }
  

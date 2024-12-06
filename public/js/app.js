@@ -113,7 +113,7 @@ createApp({
                 const url = link.toLowerCase().trim();
                 
                 if (!url.includes('twitter.com') && !url.includes('x.com')) {
-                    return 'text-red-500';  // 无效链接
+                    return 'text-red-500';  // 无效接
                 }
                 
                 if (url.includes('/status/')) {
@@ -155,20 +155,21 @@ createApp({
         },
         
         getDuplicateColor(token) {
-            // 如果代币没有重复组，返回空字符串（无背景色）
-            if (!token.duplicateGroup) return '';
+            if (!token.duplicateGroup && !this.addressAliases.has(token.owner)) return '';
             
-            // 根据重复类型返回对应的背景色
-            switch (token.duplicateType) {
-                case 'twitter_status':
-                    return 'bg-green-50';  // 推特链接重复使用浅绿色
-                case 'symbol_match':
-                    return 'bg-yellow-50'; // 符号重复使用浅黄色
-                case 'name_match':
-                    return 'bg-red-50';    // 名称重复使用浅红色
-                default:
-                    return 'bg-gray-50';   // 默认使用浅灰色
+            // 如果是dev地址（有别名），使用渐变背景色和细微的动画效果
+            if (this.addressAliases.has(token.owner)) {
+                return 'dev-token-highlight';  // 确保这个类名和CSS中的一致
             }
+            
+            // 推特重复的保持绿色背景
+            if (token.duplicateType === 'twitter_status' || 
+                token.duplicateType === 'twitter' ||
+                token.duplicateType === 'twitter_match') {
+                return 'bg-green-50';
+            }
+            
+            return '';
         },
 
         retryFetch() {
@@ -566,7 +567,7 @@ createApp({
 
                         this.importStatus = {
                             show: true,
-                            message: `导入完成：成功 ${imported} 个���跳过 ${skipped} 个重复或无效标签`,
+                            message: `导入完成：成功 ${imported} 个跳过 ${skipped} 个重复或无效标签`,
                             error: false
                         };
                         await this.fetchTwitterLabels();
@@ -1023,6 +1024,15 @@ createApp({
                 this.existingAlias = '';
             }
         },
+
+        // 在显示别名的地方添加类名
+        getDisplayName(address) {
+            if (this.addressAliases.has(address)) {
+                // 确保使用v-html来渲染HTML字符串
+                return `<span class="dev-name-highlight">${this.addressAliases.get(address)}</span>`;
+            }
+            return this.formatAddress(address);
+        }
     },
     mounted() {
         this.fetchTokens();
@@ -1218,7 +1228,7 @@ createApp({
             return this.isSearchActive ? this.searchResults : this.tokens;
         },
         displayedDuplicateTokens() {
-            // 先获取要显示的数据源（搜索结果或全部数据）
+            // 先获取要显示的数据源（搜索结果或全数据）
             let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
             
             // 按照 latestTime 降序排序，这样最新的会在最前面

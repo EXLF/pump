@@ -21,20 +21,20 @@ const apiKeySchema = new mongoose.Schema({
     }
 });
 
-
-
-// 优化数据库连接配置
-mongoose.connect('mongodb://localhost:27017/pump_tokens', {
-    maxPoolSize: 20,
-    w: 'majority',
-    readPreference: 'secondaryPreferred'
-})
-.then(() => {
-    console.log('MongoDB连接成功');
-})
-.catch(err => {
-    console.error('MongoDB连接失败:', err);
-});
+// 创建一个连接函数
+const connectDB = async () => {
+    try {
+        await mongoose.connect('mongodb://localhost:27017/pump_tokens', {
+            maxPoolSize: 20,
+            w: 'majority',
+            readPreference: 'secondaryPreferred'
+        });
+        console.log('MongoDB连接成功');
+    } catch (err) {
+        console.error('MongoDB连接失败:', err);
+        process.exit(1);
+    }
+};
 
 // 代币模型
 const tokenSchema = new mongoose.Schema({
@@ -110,14 +110,10 @@ const addressAliasSchema = new mongoose.Schema({
     }
 });
 
-const AddressAlias = mongoose.model('AddressAlias', addressAliasSchema);
-
-const ApiKey = mongoose.model('ApiKey', apiKeySchema);
-const Token = mongoose.model('Token', tokenSchema);
-
-// 导出模型
+// 导出连接函数和模型
 module.exports = {
-    ApiKey,
-    Token,
-    AddressAlias
+    connectDB,
+    ApiKey: mongoose.model('ApiKey', apiKeySchema),
+    Token: mongoose.model('Token', tokenSchema),
+    AddressAlias: mongoose.model('AddressAlias', addressAliasSchema)
 }; 

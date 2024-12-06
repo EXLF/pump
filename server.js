@@ -1,6 +1,6 @@
 const express = require('express');
 const apiKeysRouter = require('./routes/apiKeys');
-const { Token, TwitterLabel, ApiKey, AddressAlias } = require('./models/db');
+const { connectDB, Token, ApiKey, AddressAlias } = require('./models/db');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ 
@@ -10,15 +10,9 @@ const cache = new NodeCache({
     useClones: false // 禁用克隆以提高性能
 }); // 5秒缓存
 const { initializeWebSocket } = require('./websocket');
-const mongoose = require('mongoose');
 
-// 连接到 MongoDB
-mongoose.connect('mongodb://localhost:27017/your-database-name', {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-})
-.then(() => console.log('MongoDB连接成功'))
-.catch(err => console.error('MongoDB连接失败:', err));
+// 初始化数据库连接
+connectDB();
 
 // 使用 Map 存储用户IP和最后活跃时间
 const activeUsers = new Map();
@@ -126,7 +120,7 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
             query.duplicateGroup = { $ne: null };
         }
 
-        // 使用投影只获取���要的字段
+        // 使用投影只获取要的字段
         const projection = {
             name: 1,
             symbol: 1,

@@ -266,8 +266,9 @@
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
-                                        <tr v-for="token in displayedTokens" :key="token.mint"
-                                            :class="getDuplicateColor(token)">
+                                        <tr v-for="token in displayedTokens" :key="token._id"
+                                            :class="getDuplicateColor(token)"
+                                            class="transition-all duration-200">
                                             <!-- 代币符号 -->
                                             <td class="px-6 py-5 whitespace-nowrap">
                                                 <div class="flex items-center">
@@ -321,19 +322,20 @@
                                                     <!-- 如果有别名显示别名，没有则显示地址 -->
                                                     <div class="text-sm text-gray-700 cursor-pointer hover:text-blue-600"
                                                          @click="copyAddress(token.owner)"
-                                                         :title="'点击复制: ' + token.owner">
+                                                         :title="'点击复制: ' + token.owner"
+                                                         :style="addressAliases.has(token.owner) ? 'color: #000000 !important; font-weight: 800; text-shadow: 0 0 1px rgba(255,255,255,0.7);' : ''">
                                                         {{ addressAliases.has(token.owner) ? addressAliases.get(token.owner) : formatAddress(token.owner) }}
                                                     </div>
                                                     
-                                                    <!-- 只有在没有别名时才显示编辑按钮 -->
-                                                    <button v-if="!addressAliases.has(token.owner)"
+                                                    <!-- 只有在没有别名时才显示编辑按钮 暂时注释不需要-->
+                                                    <!-- <button v-if="!addressAliases.has(token.owner)"
                                                             @click="showEditAlias(token.owner)"
                                                             class="inline-flex items-center p-1 border border-transparent rounded-full text-gray-400 hover:text-gray-500"
                                                             title="编辑别名">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                         </svg>
-                                                    </button>
+                                                    </button> -->
                                                 </div>
                                             </td>
 
@@ -451,7 +453,6 @@
                                 </button>
                             </div>
                         </div>
-
                         <!-- Dev 代币列表 -->
                         <div v-if="devTokens.length > 0" class="bg-white rounded-lg shadow p-4 mt-4">
                             <div class="flex justify-between items-center mb-4">
