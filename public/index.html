@@ -95,7 +95,8 @@
                                 加入TG群
                             </a>
                             <!-- 帮助文档按钮 -->
-                            <a href="https://www.yuque.com/yixiao-vmumk/hec3ny/se9uy3iwfu43u26z?singleDoc# 《新手扫链教程》" target="_blank"
+                            <a href="https://www.yuque.com/yixiao-vmumk/hec3ny/se9uy3iwfu43u26z?singleDoc# 《新手扫链教程》"
+                                target="_blank"
                                 class="inline-flex items-center px-4 py-1.5 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors text-sm">
                                 <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
                                     <path
@@ -267,8 +268,7 @@
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
                                         <tr v-for="token in displayedTokens" :key="token._id"
-                                            :class="getDuplicateColor(token)"
-                                            class="transition-all duration-200">
+                                            :class="getDuplicateColor(token)" class="transition-all duration-200">
                                             <!-- 代币符号 -->
                                             <td class="px-6 py-5 whitespace-nowrap">
                                                 <div class="flex items-center">
@@ -321,12 +321,13 @@
                                                 <div class="flex items-center space-x-2">
                                                     <!-- 如果有别名显示别名，没有则显示地址 -->
                                                     <div class="text-sm text-gray-700 cursor-pointer hover:text-blue-600"
-                                                         @click="copyAddress(token.owner)"
-                                                         :title="'点击复制: ' + token.owner"
-                                                         :style="addressAliases.has(token.owner) ? 'color: #000000 !important; font-weight: 800; text-shadow: 0 0 1px rgba(255,255,255,0.7);' : ''">
-                                                        {{ addressAliases.has(token.owner) ? addressAliases.get(token.owner) : formatAddress(token.owner) }}
+                                                        @click="copyAddress(token.owner)"
+                                                        :title="'点击复制: ' + token.owner"
+                                                        :style="addressAliases.has(token.owner) ? 'color: #000000 !important; font-weight: 800; text-shadow: 0 0 1px rgba(255,255,255,0.7);' : ''">
+                                                        {{ addressAliases.has(token.owner) ?
+                                                        addressAliases.get(token.owner) : formatAddress(token.owner) }}
                                                     </div>
-                                                    
+
                                                     <!-- 只有在没有别名时才显示编辑按钮 暂时注释不需要-->
                                                     <!-- <button v-if="!addressAliases.has(token.owner)"
                                                             @click="showEditAlias(token.owner)"
@@ -458,69 +459,79 @@
                             <div class="flex justify-between items-center mb-4">
                                 <h3 class="text-lg font-medium text-gray-900">Dev 监控 ({{ devTokens.length }})</h3>
                                 <!-- 添加 Dev 按钮 -->
-                                <button @click="showAddDevModal = true" 
-                                        class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
+                                <button @click="showAddDevModal = true"
+                                    class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
                                     <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4" />
                                     </svg>
                                     添加 Dev
                                 </button>
                             </div>
-                            
+
                             <!-- 表格布局 -->
                             <div class="overflow-x-auto">
                                 <div class="inline-block min-w-full align-middle">
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead>
                                             <tr>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">代币/地址</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建者（Dev）</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">时间</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">社交媒体</th>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    代币/地址</th>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    创建者（Dev）</th>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    时间</th>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    社交媒体</th>
                                             </tr>
                                         </thead>
                                         <tbody class="bg-white divide-y divide-gray-200">
-                                            <tr v-for="token in displayedDevTokens" :key="token.mint" class="hover:bg-gray-50">
+                                            <tr v-for="token in displayedDevTokens" :key="token.mint"
+                                                class="hover:bg-gray-50">
                                                 <!-- 代币信息 -->
                                                 <td class="px-6 py-5 whitespace-nowrap">
                                                     <div class="flex items-center">
                                                         <!-- 代币图标 -->
                                                         <div class="flex-shrink-0 h-10 w-10">
-                                                            <img v-if="token.metadata?.image" 
-                                                                 :src="token.metadata.image" 
-                                                                 class="h-10 w-10 rounded-full"
-                                                                 :alt="token.symbol"
-                                                                 @error="handleImageError($event, token)">
-                                                            <div v-else 
-                                                                 class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                                                <span class="text-sm text-gray-500">{{ token.symbol?.charAt(0) || '?' }}</span>
+                                                            <img v-if="token.metadata?.image"
+                                                                :src="token.metadata.image"
+                                                                class="h-10 w-10 rounded-full" :alt="token.symbol"
+                                                                @error="handleImageError($event, token)">
+                                                            <div v-else
+                                                                class="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                                                <span class="text-sm text-gray-500">{{
+                                                                    token.symbol?.charAt(0) || '?' }}</span>
                                                             </div>
                                                         </div>
                                                         <!-- 代币名称和地址 -->
                                                         <div class="ml-4">
-                                                            <div class="text-sm font-medium text-gray-900">{{ token.symbol }}</div>
+                                                            <div class="text-sm font-medium text-gray-900">{{
+                                                                token.symbol }}</div>
                                                             <div class="flex items-center space-x-2">
                                                                 <span @click="copyAddress(token.mint)"
-                                                                      class="text-base text-blue-600 hover:text-blue-900 cursor-pointer">
+                                                                    class="text-base text-blue-600 hover:text-blue-900 cursor-pointer">
                                                                     {{ formatAddress(token.mint) }}
                                                                 </span>
 
                                                                 <!-- GMGN 按钮 -->
-                                                                <a :href="'https://gmgn.ai/sol/token/' + token.mint" 
-                                                                   target="_blank"
-                                                                   class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                                                                   title="在 GMGN 中查看">
-                                                                    <img src="/images/gmgn.png" 
-                                                                         alt="GMGN"
-                                                                         class="w-4 h-4 rounded-full"
-                                                                         @error="$event.target.src='/images/gmgn-fallback.png'">
+                                                                <a :href="'https://gmgn.ai/sol/token/' + token.mint"
+                                                                    target="_blank"
+                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                                                                    title="在 GMGN 中查看">
+                                                                    <img src="/images/gmgn.png" alt="GMGN"
+                                                                        class="w-4 h-4 rounded-full"
+                                                                        @error="$event.target.src='/images/gmgn-fallback.png'">
                                                                 </a>
 
                                                                 <!-- 添加推特搜索按钮 -->
-                                                                <a :href="'https://x.com/search?q=' + token.mint" 
-                                                                   target="_blank"
-                                                                   class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
-                                                                   title="在 Twitter 中搜索">
+                                                                <a :href="'https://x.com/search?q=' + token.mint"
+                                                                    target="_blank"
+                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
+                                                                    title="在 Twitter 中搜索">
                                                                     <img src="/images/x.png" alt="X" class="w-4 h-4">
                                                                 </a>
                                                             </div>
@@ -533,8 +544,9 @@
                                                     <div v-if="token.ownerAlias" class="text-sm text-gray-700">
                                                         {{ token.ownerAlias }}
                                                     </div>
-                                                    <div v-else class="text-sm text-gray-500 cursor-pointer hover:text-blue-500" 
-                                                         @click="showEditAlias(token.owner)">
+                                                    <div v-else
+                                                        class="text-sm text-gray-500 cursor-pointer hover:text-blue-500"
+                                                        @click="showEditAlias(token.owner)">
                                                         {{ formatAddress(token.owner) }}
                                                     </div>
                                                 </td>
@@ -548,56 +560,55 @@
                                                 <td class="px-6 py-5 whitespace-nowrap">
                                                     <div class="flex items-center gap-2">
                                                         <!-- 推特标签（如果存在） -->
-                                                        <span v-if="getTwitterLabel(token.metadata?.twitter)" 
-                                                              :style="{
+                                                        <span v-if="getTwitterLabel(token.metadata?.twitter)" :style="{
                                                                   backgroundColor: getTwitterLabel(token.metadata?.twitter).color,
                                                                   color: '#FFFFFF',
                                                                   padding: '2px 8px',
                                                                   borderRadius: '9999px',
                                                                   fontSize: '0.75rem',
                                                                   lineHeight: '1rem'
-                                                              }" 
-                                                              class="inline-flex items-center">
+                                                              }" class="inline-flex items-center">
                                                             {{ getTwitterLabel(token.metadata?.twitter).label }}
                                                         </span>
 
                                                         <!-- 推特链接 -->
-                                                        <a v-if="token.metadata?.twitter" 
-                                                           :href="token.metadata.twitter"
-                                                           target="_blank" 
-                                                           class="inline-flex items-center" 
-                                                           :class="[{
+                                                        <a v-if="token.metadata?.twitter" :href="token.metadata.twitter"
+                                                            target="_blank" class="inline-flex items-center" :class="[{
                                                                'text-green-500': isFullTwitterLink(token.metadata.twitter),
                                                                'text-yellow-500': isTwitterAccountLink(token.metadata.twitter),
                                                                'text-red-500': !isValidTwitterLink(token.metadata.twitter)
                                                            }]">
-                                                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                                            <svg class="w-4 h-4 mr-1" fill="currentColor"
+                                                                viewBox="0 0 24 24">
+                                                                <path
+                                                                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                                                             </svg>
                                                             <span class="text-xs">推特</span>
                                                         </a>
 
                                                         <!-- 电报链接 -->
-                                                        <a v-if="token.metadata?.telegram" 
-                                                           :href="token.metadata.telegram"
-                                                           target="_blank" 
-                                                           class="text-blue-500 hover:text-blue-600">
+                                                        <a v-if="token.metadata?.telegram"
+                                                            :href="token.metadata.telegram" target="_blank"
+                                                            class="text-blue-500 hover:text-blue-600">
                                                             <div class="flex items-center">
-                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                                                                <svg class="w-4 h-4" viewBox="0 0 24 24"
+                                                                    fill="currentColor">
+                                                                    <path
+                                                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
                                                                 </svg>
                                                                 <span class="ml-1 text-xs">电报</span>
                                                             </div>
                                                         </a>
 
                                                         <!-- 网站链接 -->
-                                                        <a v-if="token.metadata?.website" 
-                                                           :href="token.metadata.website"
-                                                           target="_blank" 
-                                                           class="text-gray-500 hover:text-gray-600">
+                                                        <a v-if="token.metadata?.website" :href="token.metadata.website"
+                                                            target="_blank" class="text-gray-500 hover:text-gray-600">
                                                             <div class="flex items-center">
-                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                                                <svg class="w-4 h-4" fill="none" stroke="currentColor"
+                                                                    viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                                        stroke-width="2"
+                                                                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
                                                                 </svg>
                                                                 <span class="ml-1 text-xs">网站</span>
                                                             </div>
@@ -621,34 +632,84 @@
                                 <div class="flex space-x-2">
                                     <!-- 上一页 -->
                                     <button @click="handleDevPageChange(devCurrentPage - 1)"
-                                            :disabled="devCurrentPage === 1"
-                                            class="px-3 py-1 rounded text-sm"
-                                            :class="devCurrentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                        :disabled="devCurrentPage === 1" class="px-3 py-1 rounded text-sm"
+                                        :class="devCurrentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
                                         上一页
                                     </button>
 
                                     <!-- 页码按钮 -->
                                     <button v-for="p in devPaginationRange" :key="p"
-                                            @click="p !== '...' && handleDevPageChange(p)"
-                                            :class="[
+                                        @click="p !== '...' && handleDevPageChange(p)" :class="[
                                                 'px-3 py-1 rounded text-sm min-w-[32px]',
                                                 {
                                                     'bg-blue-500 text-white': devCurrentPage === p,
                                                     'bg-white text-blue-500 hover:bg-blue-100': devCurrentPage !== p && p !== '...',
                                                     'bg-gray-100 text-gray-600 cursor-default': p === '...'
                                                 }
-                                            ]"
-                                            :disabled="p === '...'">
+                                            ]" :disabled="p === '...'">
                                         {{ p }}
                                     </button>
 
                                     <!-- 下一页 -->
                                     <button @click="handleDevPageChange(devCurrentPage + 1)"
-                                            :disabled="devCurrentPage === devPages"
-                                            class="px-3 py-1 rounded text-sm"
-                                            :class="devCurrentPage === devPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                        :disabled="devCurrentPage === devPages" class="px-3 py-1 rounded text-sm"
+                                        :class="devCurrentPage === devPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
                                         下一页
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 当没有 Dev 时显示空状态但保持相同样式 -->
+                        <div v-else class="bg-white rounded-lg shadow p-4 mt-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-medium text-gray-900">Dev 监控 (0)</h3>
+                                <button @click="showAddDevModal = true"
+                                    class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    添加 Dev
+                                </button>
+                            </div>
+
+                            <!-- 空状态表格 -->
+                            <div class="overflow-x-auto">
+                                <div class="inline-block min-w-full align-middle">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead>
+                                            <tr>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    代币/地址</th>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    创建者（Dev）</th>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    时间</th>
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    社交媒体</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200">
+                                            <tr>
+                                                <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                                                    <div class="flex flex-col items-center justify-center">
+                                                        <svg class="w-12 h-12 text-gray-400 mb-3" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                        </svg>
+                                                        <p class="text-sm">暂无 Dev 数据</p>
+                                                        <p class="text-xs text-gray-400 mt-1">点击右上角按钮添加 Dev</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -1015,16 +1076,14 @@
         <div v-if="showAliasModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg p-6 w-96">
                 <h3 class="text-lg font-medium mb-4">编辑地址别名</h3>
-                <input type="text" v-model="aliasInput" 
-                       class="w-full px-3 py-2 border rounded-lg mb-4" 
-                       placeholder="输入别名">
+                <input type="text" v-model="aliasInput" class="w-full px-3 py-2 border rounded-lg mb-4"
+                    placeholder="输入别名">
                 <div class="flex justify-end space-x-2">
-                    <button @click="showAliasModal = false" 
-                            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                    <button @click="showAliasModal = false"
+                        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
                         取消
                     </button>
-                    <button @click="saveAlias" 
-                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    <button @click="saveAlias" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                         保存
                     </button>
                 </div>
@@ -1032,7 +1091,8 @@
         </div>
 
         <!-- 添加 Dev 模态框 -->
-        <div v-if="showAddDevModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div v-if="showAddDevModal"
+            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg p-6 max-w-md w-full">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-medium text-gray-900">添加 Dev 地址</h3>
@@ -1042,38 +1102,35 @@
                         </svg>
                     </button>
                 </div>
-                
+
                 <div class="space-y-4">
                     <!-- Dev 地址输入 -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Dev 地址</label>
-                        <input type="text" v-model="newDev.address" 
-                               @input="checkDevAddress"
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <input type="text" v-model="newDev.address" @input="checkDevAddress"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <p v-if="devAddressExists" class="mt-1 text-sm text-red-600">
                             该地址已存在别名：{{ existingAlias }}
                         </p>
                     </div>
-                    
+
                     <!-- 别名输入 -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700">别名</label>
-                        <input type="text" v-model="newDev.alias" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <input type="text" v-model="newDev.alias"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                     </div>
-                    
+
                     <!-- 错误提示 -->
                     <p v-if="devAddError" class="text-sm text-red-600">{{ devAddError }}</p>
-                    
+
                     <!-- 按钮组 -->
                     <div class="flex justify-end space-x-3 mt-4">
-                        <button @click="showAddDevModal = false" 
-                                class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <button @click="showAddDevModal = false"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
                             取消
                         </button>
-                        <button @click="addNewDev" 
-                                :disabled="devAddressExists"
-                                :class="[
+                        <button @click="addNewDev" :disabled="devAddressExists" :class="[
                                     'px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white',
                                     devAddressExists ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                                 ]">
