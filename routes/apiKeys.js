@@ -61,4 +61,89 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
+// 添加禁用 API key 的路由
+router.post('/disable', async (req, res) => {
+    try {
+        const { key } = req.body;
+        if (!key) {
+            return res.status(400).json({ message: 'Key 是必需的' });
+        }
+
+        const result = await ApiKey.findOneAndUpdate(
+            { key },
+            { isActive: false },
+            { new: true }
+        );
+
+        if (!result) {
+            return res.status(404).json({ message: '未找到指定的 API Key' });
+        }
+
+        res.json({ 
+            message: 'API Key 已禁用',
+            key: result.key,
+            isActive: result.isActive
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 添加重新启用 API key 的路由
+router.post('/enable', async (req, res) => {
+    try {
+        const { key } = req.body;
+        if (!key) {
+            return res.status(400).json({ message: 'Key 是必需的' });
+        }
+
+        const result = await ApiKey.findOneAndUpdate(
+            { key },
+            { isActive: true },
+            { new: true }
+        );
+
+        if (!result) {
+            return res.status(404).json({ message: '未找到指定的 API Key' });
+        }
+
+        res.json({ 
+            message: 'API Key 已启用',
+            key: result.key,
+            isActive: result.isActive
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// 添加获取 API key 状态的路由
+router.get('/status', async (req, res) => {
+    try {
+        const stats = await ApiKey.aggregate([
+            {
+                $group: {
+                    _id: '$isActive',
+                    count: { $sum: 1 },
+                    keys: { $push: {
+                        id: '$_id',
+                        key: '$key',
+                        description: '$description',
+                        lastUsed: '$lastUsed'
+                    }}
+                }
+            }
+        ]);
+
+        const result = {
+            active: stats.find(s => s._id === true) || { count: 0, keys: [] },
+            inactive: stats.find(s => s._id === false) || { count: 0, keys: [] }
+        };
+
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 module.exports = router; 

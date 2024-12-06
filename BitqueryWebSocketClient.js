@@ -1,10 +1,12 @@
 require('dotenv').config();
 
+const { EventEmitter } = require('events');
 const { WebSocket } = require("ws");
 const { ApiKey } = require('./models/db');
 
-class BitqueryWebSocketClient {
+class BitqueryWebSocketClient extends EventEmitter {
     constructor(tokenManager) {
+        super();
         this.tokenManager = tokenManager;
         this.ws = null;
         this.apiKeys = [];
@@ -12,7 +14,6 @@ class BitqueryWebSocketClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = parseInt(process.env.MAX_RECONNECT_ATTEMPTS, 10) || 2;
         this.reconnectDelay = parseInt(process.env.RECONNECT_DELAY, 10) || 2000;
-        this.loadApiKeys();
     }
 
     async loadApiKeys() {
@@ -25,9 +26,18 @@ class BitqueryWebSocketClient {
         }
     }
 
-    connect() {
+    async connect() {
+        if (this.apiKeys.length === 0) {
+            await this.loadApiKeys();
+        }
+        
         const currentKey = this.apiKeys[this.currentKeyIndex];
-        console.log(currentKey)
+        if (!currentKey) {
+            console.error("没有可用的 API keys");
+            return;
+        }
+
+        console.log(`正在使用 API Key: ${currentKey}`);
         this.ws = new WebSocket(
             `wss://streaming.bitquery.io/eap?token=${currentKey}`,
             ["graphql-ws"]
@@ -40,7 +50,6 @@ class BitqueryWebSocketClient {
         this.ws.on("open", () => {
             console.log("WebSocket 连接已建立");
             this.reconnectAttempts = 0;
-            // 发送初始化消息
             const initMessage = JSON.stringify({ type: "connection_init" });
             this.ws.send(initMessage);
         });
@@ -75,8 +84,14 @@ class BitqueryWebSocketClient {
             this.attemptReconnect();
         });
 
-        this.ws.on("error", (error) => {
+        this.ws.on("error", async (error) => {
             console.error("WebSocket 错误:", error);
+            if (error.message?.includes('402')) {
+                console.log('检测到 402 错误，禁用当前 key 并切换');
+                await this.disableCurrentKey();
+                this.rotateApiKey();
+                this.emit('keyDisabled', this.apiKeys[this.currentKeyIndex]);
+            }
         });
     }
 
@@ -91,11 +106,39 @@ class BitqueryWebSocketClient {
         }
     }
 
-    rotateApiKey() {
-        this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+    async disableCurrentKey() {
+        try {
+            const currentKey = this.apiKeys[this.currentKeyIndex];
+            await fetch('/api/keys/disable', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ key: currentKey })
+            });
+            console.log(`已禁用 API key: ${currentKey}`);
+        } catch (error) {
+            console.error('禁用 API key 失败:', error);
+        }
+    }
+
+    async rotateApiKey() {
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+        }
+        
+        await this.loadApiKeys();
+        
+        if (this.apiKeys.length === 0) {
+            console.error("没有可用的 API keys");
+            return;
+        }
+        
+        this.currentKeyIndex = 0;
         this.reconnectAttempts = 0;
         console.log("切换到新的 API key");
-        this.connect();
+        await this.connect();
     }
 
     sendSubscription() {

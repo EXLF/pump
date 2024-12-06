@@ -59,6 +59,10 @@ createApp({
             duplicateSearchTotalPages: 1,
             onlineUsers: 20,
             onlineUsersPolling: null,
+            addressAliases: new Map(), // 存储地址别名映射
+            showAliasModal: false,
+            currentEditAddress: null,
+            aliasInput: ''
         }
     },
     methods: {
@@ -858,6 +862,47 @@ createApp({
         formatShortAddress(address) {
             if (!address) return '';
             return `${address.slice(0, 4)}...${address.slice(-4)}`;
+        },
+
+        // 获取地址别名
+        async fetchAddressAliases() {
+            try {
+                const response = await axios.get('/api/address-aliases');
+                this.addressAliases.clear();
+                response.data.forEach(item => {
+                    this.addressAliases.set(item.address, item.alias);
+                });
+            } catch (error) {
+                console.error('获取地址别名失败:', error);
+            }
+        },
+
+        // 显示编辑别名模态框
+        showEditAlias(address) {
+            this.currentEditAddress = address;
+            this.aliasInput = this.addressAliases.get(address) || '';
+            this.showAliasModal = true;
+        },
+
+        // 保存别名
+        async saveAlias() {
+            try {
+                await axios.post('/api/address-aliases', {
+                    address: this.currentEditAddress,
+                    alias: this.aliasInput
+                });
+                this.addressAliases.set(this.currentEditAddress, this.aliasInput);
+                this.showAliasModal = false;
+                this.currentEditAddress = null;
+                this.aliasInput = '';
+            } catch (error) {
+                console.error('保存别名失败:', error);
+            }
+        },
+
+        // 获取显示文本（别名或地址）
+        getDisplayAddress(address) {
+            return this.addressAliases.get(address) || this.formatShortAddress(address);
         }
     },
     mounted() {
@@ -887,6 +932,7 @@ createApp({
         }
 
         this.connectWebSocket();
+        this.fetchAddressAliases();
     },
     beforeUnmount() {
         if (this.refreshInterval) {

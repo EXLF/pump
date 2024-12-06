@@ -6,8 +6,14 @@ const Queue = require('bull');
 
 class TokenDataManager {
     constructor() {
+        if (TokenDataManager.instance) {
+            return TokenDataManager.instance;
+        }
+        TokenDataManager.instance = this;
+
         this.wsClient = null;
         this.lastProcessedTime = null;
+        
         // 初始化队列
         this.tokenQueue = new Queue('tokenProcessing', {
             redis: {
@@ -37,11 +43,23 @@ class TokenDataManager {
         this.tokenQueue.on('error', (error) => {
             console.error('队列错误:', error);
         });
+
+        // 初始化 WebSocket 客户端
+        this.initialize();
     }
 
     initialize() {
+        if (this.wsClient) {
+            console.log('WebSocket 客户端已经初始化');
+            return;
+        }
+        
         this.wsClient = new BitqueryWebSocketClient(this);
         this.wsClient.connect();
+        
+        this.wsClient.on('keyDisabled', async (key) => {
+            console.log(`API key ${key} 已被禁用，正在切换到新的 key`);
+        });
     }
 
     // WebSocket 数据接收处理
@@ -220,7 +238,7 @@ class TokenDataManager {
 
     // 查找重复组
     async findDuplicateGroup(tokenData) {
-        const timeWindow = new Date(Date.now() - 1 * 60 * 60 * 1000); // 1小时时间窗口
+        const timeWindow = new Date(Date.now() - 1 * 60 * 60 * 1000); // 1小时时间窗��
         let highestPriorityMatch = null;
 
         // 按优先级顺序检查每种重复类型
@@ -258,7 +276,7 @@ class TokenDataManager {
         const timeWindow = new Date(Date.now() - 1 * 60 * 60 * 1000);
         let updated = false;
 
-        // 按优先级顺序检查和更新
+        // 按先级顺序检查和更新
         for (const check of TokenDataManager.duplicateChecks) {
             try {
                 const value = check.field.split('.').reduce((obj, key) => obj?.[key], tokenData);

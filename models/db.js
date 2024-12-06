@@ -93,12 +93,31 @@ tokenSchema.index({ 'metadata.telegram': 1 });
 tokenSchema.index({ duplicateGroup: 1 });
 tokenSchema.index({ duplicateType: 1 });
 
+// 添加地址别名 Schema
+const addressAliasSchema = new mongoose.Schema({
+    address: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    alias: {
+        type: String,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const AddressAlias = mongoose.model('AddressAlias', addressAliasSchema);
+
 const ApiKey = mongoose.model('ApiKey', apiKeySchema);
 const Token = mongoose.model('Token', tokenSchema);
 
 // 导出模型
 module.exports = {
     ApiKey,
-    Token  // 保留现有的 Token 模型
-    // TwitterLabel  // 保留现有的 TwitterLabel 模型
+    Token,
+    AddressAlias
 }; 

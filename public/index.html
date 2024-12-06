@@ -320,18 +320,18 @@
                                                 <div class="flex items-center space-x-2">
                                                     <span @click="copyAddress(token.owner)" 
                                                           class="text-base text-blue-600 hover:text-blue-900 cursor-pointer">
-                                                        {{ formatShortAddress(token.owner) }}
+                                                        {{ getDisplayAddress(token.owner) }}
                                                     </span>
-                                                    <!-- GMGN 按钮 -->
-                                                    <a :href="'https://gmgn.ai/sol/address/' + token.owner" 
-                                                       target="_blank"
-                                                       class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
-                                                       title="在 GMGN 中查看">
-                                                        <img src="/images/gmgn.png" 
-                                                             alt="GMGN" 
-                                                             class="w-4 h-4 rounded-full"
-                                                             @error="$event.target.src='/images/gmgn-fallback.png'">
-                                                    </a>
+                                                    
+                                                    <!-- 编辑别名按钮 -->
+                                                    <button @click="showEditAlias(token.owner)"
+                                                            class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                                                            title="编辑别名">
+                                                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                        </svg>
+                                                    </button>
                                                 </div>
                                             </td>
 
@@ -806,6 +806,26 @@
                 </svg>
                 <span>显示推特标签管理</span>
             </button>
+        </div>
+
+        <!-- 添加别名编辑模态框 -->
+        <div v-if="showAliasModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 w-96">
+                <h3 class="text-lg font-medium mb-4">编辑地址别名</h3>
+                <input type="text" v-model="aliasInput" 
+                       class="w-full px-3 py-2 border rounded-lg mb-4" 
+                       placeholder="输入别名">
+                <div class="flex justify-end space-x-2">
+                    <button @click="showAliasModal = false" 
+                            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                        取消
+                    </button>
+                    <button @click="saveAlias" 
+                            class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                        保存
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

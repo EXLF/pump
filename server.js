@@ -1,6 +1,6 @@
 const express = require('express');
 const apiKeysRouter = require('./routes/apiKeys');
-const { Token, TwitterLabel, ApiKey } = require('./models/db');
+const { Token, TwitterLabel, ApiKey, AddressAlias } = require('./models/db');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ 
@@ -430,6 +430,31 @@ setInterval(async () => {
         console.error('更新 duplicateGroup 失败:', error);
     }
 }, 8 * 60 * 60 * 1000); // 每8小时执行一次
+
+// 获取所有地址别名
+app.get('/api/address-aliases', async (req, res) => {
+    try {
+        const aliases = await AddressAlias.find().lean();
+        res.json(aliases);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 添加或更新地址别名
+app.post('/api/address-aliases', async (req, res) => {
+    try {
+        const { address, alias } = req.body;
+        const result = await AddressAlias.findOneAndUpdate(
+            { address },
+            { alias },
+            { upsert: true, new: true }
+        );
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 const server = app.listen(port, () => {
     console.log(`服务器运行在 http://localhost:${port}`);
