@@ -12,7 +12,7 @@ createApp({
             loading: false,
             error: null,
             refreshInterval: null,
-            pageSize: 11,
+            pageSize: 9,
             duplicateCurrentPage: 1,
             duplicatePageSize: 4,
             duplicateTotalPages: 1,

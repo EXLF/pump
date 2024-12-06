@@ -107,7 +107,7 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
             return res.json(cachedData);
         }
 
-        const limit = 11;
+        const limit = 9;
         const skip = (page - 1) * limit;
 
         // 构建查询条件
@@ -312,7 +312,7 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
     try {
         const groupNumber = parseInt(req.params.groupNumber);
         const page = parseInt(req.query.page) || 1;
-        const limit = 11; // 每页显示11条记录
+        const limit = 9; // 每页显示9条记录
         const skip = (page - 1) * limit;
         
         // 使用 Promise.all 并行执行查询
@@ -355,7 +355,7 @@ app.get('/api/tokens/search', async (req, res) => {
     try {
         const { query } = req.query;
         const page = parseInt(req.query.page) || 1;
-        const limit = 11;
+        const limit = 9;
         const skip = (page - 1) * limit;
 
         if (!query) {
