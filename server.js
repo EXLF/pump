@@ -126,7 +126,7 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
             query.duplicateGroup = { $ne: null };
         }
 
-        // 使用投影只获取需要的字段
+        // 使用投影只获取���要的字段
         const projection = {
             name: 1,
             symbol: 1,
@@ -175,7 +175,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
         const { query } = req.query;
         const cacheKey = query ? `duplicate_tokens_search_${query}` : 'duplicate_tokens';
         
-        // 构建基础查询条件
+        // 构建基础查询条
         let baseQuery = { duplicateGroup: { $ne: null } };
         
         // 如果有搜索查询，添加搜索条件
@@ -452,6 +452,53 @@ app.post('/api/address-aliases', async (req, res) => {
         );
         res.json(result);
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 获取 Dev 代币列表
+app.get('/api/dev-tokens', async (req, res) => {
+    try {
+        // 获取所有地址别名
+        const aliases = await AddressAlias.find().lean();
+        if (aliases.length === 0) {
+            console.log('没有找到任何地址别名');
+            return res.json([]);
+        }
+        
+        const devAddresses = aliases.map(a => a.address);
+        console.log('找到的开发者地址:', devAddresses);
+        
+        // 获取这些地址最新创建的代币，包含完整信息
+        const tokens = await Token.find({
+            owner: { $in: devAddresses }
+        }, {
+            mint: 1,
+            owner: 1,
+            symbol: 1,
+            name: 1,
+            timestamp: 1,
+            metadata: 1
+        })
+        .sort({ timestamp: -1 })
+        .lean();
+
+        // 为每个代币添加开发者别名
+        const tokensWithAliases = tokens.map(token => {
+            const ownerAlias = aliases.find(a => a.address === token.owner);
+            return {
+                ...token,
+                ownerAlias: ownerAlias ? ownerAlias.alias : null,
+                // 调整时间为 UTC+8
+                timestamp: new Date(new Date(token.timestamp).getTime())
+            };
+        });
+
+        console.log(`找到 ${tokens.length} 个 dev 代币`);
+
+        res.json(tokensWithAliases);
+    } catch (error) {
+        console.error('获取 Dev 代币失败:', error);
         res.status(500).json({ error: error.message });
     }
 });

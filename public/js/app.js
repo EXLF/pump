@@ -62,7 +62,18 @@ createApp({
             addressAliases: new Map(), // 存储地址别名映射
             showAliasModal: false,
             currentEditAddress: null,
-            aliasInput: ''
+            aliasInput: '',
+            devTokens: [],
+            devCurrentPage: 1,
+            devPageSize: 5,
+            showAddDevModal: false,
+            newDev: {
+                address: '',
+                alias: ''
+            },
+            devAddError: '',
+            devAddressExists: false,
+            existingAlias: '',
         }
     },
     methods: {
@@ -555,7 +566,7 @@ createApp({
 
                         this.importStatus = {
                             show: true,
-                            message: `导入完成：成功 ${imported} 个，跳过 ${skipped} 个重复或无效标签`,
+                            message: `导入完成：成功 ${imported} 个���跳过 ${skipped} 个重复或无效标签`,
                             error: false
                         };
                         await this.fetchTwitterLabels();
@@ -774,7 +785,7 @@ createApp({
             const start = (this.duplicateCurrentPage - 1) * this.duplicatePageSize;
             const end = start + this.duplicatePageSize;
             
-            // 直接使用已排序的数据
+            // 接使用已排序数据
             return this.duplicateTokens.slice(start, end);
         },
 
@@ -877,21 +888,52 @@ createApp({
             }
         },
 
-        // 显示编辑别名模态框
+        // 修改显示编辑别名的方法
         showEditAlias(address) {
+            console.log('尝试编辑地址:', address); // 添加日志
+            console.log('当前别名Map:', this.addressAliases); // 添加日志
+            
+            // 如果已经有别名，则不允许编辑
+            if (this.addressAliases.has(address)) {
+                console.log('该地址已有别名，不允许编辑'); // 添加日志
+                return;
+            }
+            
+            // 如果没有别名，则允许编辑
             this.currentEditAddress = address;
-            this.aliasInput = this.addressAliases.get(address) || '';
+            this.aliasInput = '';
             this.showAliasModal = true;
+            console.log('显示编辑模态框'); // 添加日志
         },
 
-        // 保存别名
+        // 修改地址显示的方法
+        formatOwnerDisplay(owner) {
+            const alias = this.addressAliases.get(owner);
+            if (alias) {
+                // 如果有别名，只显示别名，不可点击
+                return `<span class="text-gray-700">${alias}</span>`;
+            } else {
+                // 如果没有别名，显示地址并允许点击编辑
+                return `<span class="cursor-pointer hover:text-blue-500" onclick="showEditAlias('${owner}')">${this.formatAddress(owner)}</span>`;
+            }
+        },
+
+        // 保存名
         async saveAlias() {
             try {
                 await axios.post('/api/address-aliases', {
                     address: this.currentEditAddress,
                     alias: this.aliasInput
                 });
+                
+                // 更新本地 Map
                 this.addressAliases.set(this.currentEditAddress, this.aliasInput);
+                
+                // 重新获取数据以确保同步
+                await this.fetchAddressAliases();
+                await this.fetchDevTokens();
+                
+                // 重置状态
                 this.showAliasModal = false;
                 this.currentEditAddress = null;
                 this.aliasInput = '';
@@ -903,7 +945,84 @@ createApp({
         // 获取显示文本（别名或地址）
         getDisplayAddress(address) {
             return this.addressAliases.get(address) || this.formatShortAddress(address);
-        }
+        },
+
+        // 获取 Dev 代币列表
+        async fetchDevTokens() {
+            try {
+                console.log('开始获取 Dev 代币');
+                const response = await axios.get('/api/dev-tokens');
+                console.log('获取到的 Dev 代币:', response.data);
+                this.devTokens = response.data;
+                console.log('当前 devTokens 长度:', this.devTokens.length);
+            } catch (error) {
+                console.error('获取 Dev 代币失败:', error);
+            }
+        },
+
+        // 处理页码变化
+        handleDevPageChange(page) {
+            if (page >= 1 && page <= this.devPages) {
+                this.devCurrentPage = page;
+            }
+        },
+
+        // 添加新的 Dev 地址
+        async addNewDev() {
+            try {
+                // 验证输入
+                if (!this.newDev.address || !this.newDev.alias) {
+                    this.devAddError = '地址和别名都不能为空';
+                    return;
+                }
+                
+                // 验证地址格式
+                if (this.newDev.address.length !== 44) {
+                    this.devAddError = '请输入有效的 Solana 地址';
+                    return;
+                }
+                
+                // 检查是否已存在
+                if (this.devAddressExists) {
+                    this.devAddError = '该地址已存在别名';
+                    return;
+                }
+                
+                // 发送请求添加新的 Dev
+                await axios.post('/api/address-aliases', {
+                    address: this.newDev.address,
+                    alias: this.newDev.alias
+                });
+                
+                // 重新获取 Dev 列表
+                await this.fetchDevTokens();
+                await this.fetchAddressAliases();
+                
+                // 重置表单并关闭模态框
+                this.newDev = { address: '', alias: '' };
+                this.devAddError = '';
+                this.devAddressExists = false;
+                this.existingAlias = '';
+                this.showAddDevModal = false;
+                
+            } catch (error) {
+                console.error('添加 Dev 失败:', error);
+                this.devAddError = '添加失败，请稍后重试';
+            }
+        },
+
+        // 检查 Dev 地址是否已存在
+        checkDevAddress() {
+            const address = this.newDev.address;
+            const existingAlias = this.addressAliases.get(address);
+            if (existingAlias) {
+                this.devAddressExists = true;
+                this.existingAlias = existingAlias;
+            } else {
+                this.devAddressExists = false;
+                this.existingAlias = '';
+            }
+        },
     },
     mounted() {
         this.fetchTokens();
@@ -933,6 +1052,15 @@ createApp({
 
         this.connectWebSocket();
         this.fetchAddressAliases();
+        this.fetchDevTokens();
+        
+        // 立即获取一次
+        this.fetchDevTokens();
+        
+        // 设置定时获取
+        setInterval(() => {
+            this.fetchDevTokens();
+        }, 30000);
     },
     beforeUnmount() {
         if (this.refreshInterval) {
@@ -1090,7 +1218,7 @@ createApp({
             return this.isSearchActive ? this.searchResults : this.tokens;
         },
         displayedDuplicateTokens() {
-            // 首先获取要显示的数据源（搜索结果或全部数据）
+            // 先获取要显示的数据源（搜索结果或全部数据）
             let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
             
             // 按照 latestTime 降序排序，这样最新的会在最前面
@@ -1172,6 +1300,54 @@ createApp({
             const start = (currentPage - 1) * this.duplicatePageSize;
             const end = start + this.duplicatePageSize;
             return data.slice(start, end);
+        },
+
+        // 计算总页数
+        devPages() {
+            return Math.ceil(this.devTokens.length / this.devPageSize);
+        },
+        
+        // 当前页显示的数据
+        displayedDevTokens() {
+            const start = (this.devCurrentPage - 1) * this.devPageSize;
+            const end = start + this.devPageSize;
+            return this.devTokens.slice(start, end);
+        },
+        
+        // 分页范围
+        devPaginationRange() {
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = this.devCurrentPage - leftOffset;
+            let end = this.devCurrentPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), this.devPages);
+                start = 1;
+            }
+            
+            if (end > this.devPages) {
+                start = Math.max(start - (end - this.devPages), 1);
+                end = this.devPages;
+            }
+            
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            if (end < this.devPages) {
+                if (end < this.devPages - 1) range.push('...');
+                range.push(this.devPages);
+            }
+            
+            return range;
         }
     }
 }).mount('#app'); 
