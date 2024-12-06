@@ -13,4 +13,21 @@
 
 .flex-none {
     flex: none;
+}
+
+/* 添加布局相关的工具类 */
+.min-h-screen {
+    min-height: 100vh;
+}
+
+.min-w-0 {
+    min-width: 0;
+}
+
+.overflow-x-auto {
+    overflow-x: auto;
+}
+
+.overflow-y-hidden {
+    overflow-y: hidden;
 } 

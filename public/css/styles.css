@@ -65,4 +65,49 @@
         transform: translateY(0);
     }
 }
+
+/* 添加自适应布局相关样式 */
+.sticky-container {
+    height: calc(100vh - 5rem); /* 减去顶部导航栏的高度 */
+    position: sticky;
+    top: 5rem;
+}
+
+/* 表格列宽控制 */
+.table-fixed {
+    table-layout: fixed;
+}
+
+/* 确保内容不会溢出单元格 */
+.whitespace-nowrap {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 添加响应式布局支持 */
+@media (max-width: 1280px) {
+    .flex.gap-8 {
+        gap: 1rem;
+    }
+    
+    .w-80 {
+        width: 18rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .flex.gap-8 {
+        flex-direction: column;
+    }
+    
+    .w-80 {
+        width: 100%;
+    }
+    
+    .sticky-container {
+        height: auto;
+        position: static;
+    }
+}
  

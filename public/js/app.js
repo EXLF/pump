@@ -853,6 +853,11 @@ createApp({
                 console.log('WebSocket 连接已关闭，尝试重新连接...');
                 setTimeout(() => this.connectWebSocket(), 5000);
             });
+        },
+
+        formatShortAddress(address) {
+            if (!address) return '';
+            return `${address.slice(0, 4)}...${address.slice(-4)}`;
         }
     },
     mounted() {

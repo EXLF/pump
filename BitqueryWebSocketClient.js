@@ -10,8 +10,8 @@ class BitqueryWebSocketClient {
         this.apiKeys = [];
         this.currentKeyIndex = 0;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = parseInt(process.env.MAX_RECONNECT_ATTEMPTS, 10) || 5;
-        this.reconnectDelay = parseInt(process.env.RECONNECT_DELAY, 10) || 5000;
+        this.maxReconnectAttempts = parseInt(process.env.MAX_RECONNECT_ATTEMPTS, 10) || 2;
+        this.reconnectDelay = parseInt(process.env.RECONNECT_DELAY, 10) || 2000;
         this.loadApiKeys();
     }
 

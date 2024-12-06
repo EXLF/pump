@@ -131,6 +131,7 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
             name: 1,
             symbol: 1,
             mint: 1,
+            owner: 1,
             timestamp: 1,
             metadata: 1,
             duplicateGroup: 1,
