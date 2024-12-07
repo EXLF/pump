@@ -74,6 +74,9 @@ createApp({
             devAddError: '',
             devAddressExists: false,
             existingAlias: '',
+            showDevListModal: false,
+            devList: [],
+            devSearchQuery: '',
         }
     },
     methods: {
@@ -219,7 +222,7 @@ createApp({
                     page: this.currentPage
                 };
                 
-                // 优先处理特��组的查询
+                // 优先处理特定组的查询
                 if (this.selectedDuplicateGroup) {
                     params.groupNumber = this.selectedDuplicateGroup;
                 } else if (this.activeTab === 'duplicates') {
@@ -894,7 +897,7 @@ createApp({
             console.log('尝试编辑地址:', address); // 添加日志
             console.log('当前别名Map:', this.addressAliases); // 添加日志
             
-            // 如果��有别名，则不允许编辑
+            // 如果有别名，则不允许编辑
             if (this.addressAliases.has(address)) {
                 console.log('该地址已有别名，不允许编辑'); // 添加日志
                 return;
@@ -1073,6 +1076,16 @@ createApp({
                 console.error('加载地址别名失败:', error);
             }
         },
+
+        // 获取 Dev 列表
+        async fetchDevList() {
+            try {
+                const response = await axios.get('/api/address-aliases');
+                this.devList = response.data;
+            } catch (error) {
+                console.error('获取 Dev 列表失败:', error);
+            }
+        },
     },
     mounted() {
         this.fetchTokens();
@@ -1113,6 +1126,7 @@ createApp({
         }, 30000);
 
         this.loadAddressAliases();
+        this.fetchDevList(); // 初始加载 Dev 列表
     },
     beforeUnmount() {
         if (this.refreshInterval) {
@@ -1400,6 +1414,23 @@ createApp({
             }
             
             return range;
+        },
+        filteredDevList() {
+            if (!this.devSearchQuery) return this.devList;
+            
+            const query = this.devSearchQuery.toLowerCase();
+            return this.devList.filter(dev => 
+                dev.address.toLowerCase().includes(query) || 
+                dev.alias.toLowerCase().includes(query)
+            );
+        }
+    },
+    watch: {
+        // 监听模态框显示状态，每次打开时刷新列表
+        showDevListModal(newVal) {
+            if (newVal) {
+                this.fetchDevList();
+            }
         }
     }
 }).mount('#app'); 
