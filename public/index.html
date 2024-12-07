@@ -320,8 +320,7 @@
                                             <td class="px-6 py-5 whitespace-nowrap">
                                                 <div class="flex items-center space-x-2">
                                                     <div class="text-sm text-gray-700 cursor-pointer hover:text-blue-600"
-                                                        @click="copyText(token.signer)"
-                                                        :title="'点击复制: ' + token.signer"
+                                                        @click="copyText(token.signer)" :title="'点击复制: ' + token.signer"
                                                         :style="addressAliases.has(token.signer) ? 'color: #000000 !important; font-weight: 800; text-shadow: 0 0 1px rgba(255,255,255,0.7);' : ''">
                                                         {{ getDisplayName(token) }}
                                                     </div>
@@ -449,10 +448,11 @@
                                 <!-- 添加按钮组 -->
                                 <div class="flex space-x-2">
                                     <!-- 查看 Dev 列表按钮 -->
-                                    <button @click="showDevListModal = true" 
-                                            class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50">
+                                    <button @click="showDevListModal = true"
+                                        class="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50">
                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M4 6h16M4 12h16m-7 6h7" />
                                         </svg>
                                         Dev 列表
                                     </button>
@@ -460,19 +460,21 @@
                                     <button @click="showAddDevModal = true"
                                         class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 4v16m8-8H4" />
                                         </svg>
                                         添加 Dev
                                     </button>
                                     <!-- 声音提示开关 -->
                                     <div class="flex items-center mr-2">
                                         <span class="text-xs text-gray-600 mr-2">启用声音提示</span>
-                                        <button @click="soundEnabled = !soundEnabled" 
-                                                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out"
-                                                :class="soundEnabled ? 'bg-blue-600' : 'bg-gray-200'">
+                                        <button @click="soundEnabled = !soundEnabled"
+                                            class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out"
+                                            :class="soundEnabled ? 'bg-blue-600' : 'bg-gray-200'">
                                             <span class="sr-only">启用声音提示</span>
-                                            <span class="inline-block w-4 h-4 transform transition-transform duration-200 ease-in-out bg-white rounded-full shadow-sm"
-                                                  :class="soundEnabled ? 'translate-x-6' : 'translate-x-1'">
+                                            <span
+                                                class="inline-block w-4 h-4 transform transition-transform duration-200 ease-in-out bg-white rounded-full shadow-sm"
+                                                :class="soundEnabled ? 'translate-x-6' : 'translate-x-1'">
                                             </span>
                                         </button>
                                     </div>
@@ -485,13 +487,17 @@
                                     <table class="min-w-full divide-y divide-gray-200">
                                         <thead>
                                             <tr>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     代币/地址</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     创建者（DEV）</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     时间</th>
-                                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                <th
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     社交媒体</th>
                                             </tr>
                                         </thead>
@@ -919,7 +925,6 @@
             </div>
         </div>
 
-
         <!-- 添加别名编辑模态框 -->
         <div v-if="showAliasModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg p-6 w-96">
@@ -990,13 +995,15 @@
         </div>
 
         <!-- Dev 列表模态框 -->
-        <div v-if="showDevListModal" class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+        <div v-if="showDevListModal"
+            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
             <div class="bg-white rounded-lg p-6 max-w-lg w-full mx-4">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-lg font-medium text-gray-900">已添加的 Dev 列表</h3>
                     <button @click="showDevListModal = false" class="text-gray-400 hover:text-gray-500">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
@@ -1004,16 +1011,14 @@
                 <!-- 添加搜索框 -->
                 <div class="mb-4">
                     <div class="relative">
-                        <input type="text" 
-                               v-model="devSearchQuery" 
-                               placeholder="搜索地址或别名"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
+                        <input type="text" v-model="devSearchQuery" placeholder="搜索地址或别名"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm">
                         <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                            <button @click="devSearchQuery = ''" 
-                                    v-if="devSearchQuery"
-                                    class="text-gray-400 hover:text-gray-600">
+                            <button @click="devSearchQuery = ''" v-if="devSearchQuery"
+                                class="text-gray-400 hover:text-gray-600">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"></path>
                                 </svg>
                             </button>
                         </div>
@@ -1021,41 +1026,90 @@
                 </div>
 
                 <div class="mt-4 space-y-2 max-h-96 overflow-y-auto">
-                    <div v-for="alias in filteredDevList" :key="alias.address" 
-                         class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div v-for="alias in filteredDevList" :key="alias.address"
+                        class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                         <div>
                             <div class="text-sm font-medium text-gray-900">{{ alias.alias }}</div>
                             <div class="text-xs text-gray-500">{{ formatAddress(alias.address) }}</div>
                         </div>
-                        <button @click="copyAddress(alias.address)" 
-                                class="text-gray-400 hover:text-gray-600">
+                        <button @click="copyAddress(alias.address)" class="text-gray-400 hover:text-gray-600">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                             </svg>
                         </button>
                     </div>
                     <!-- 无搜索结果提示 -->
-                    <div v-if="devSearchQuery && filteredDevList.length === 0" 
-                         class="text-center py-4 text-gray-500">
+                    <div v-if="devSearchQuery && filteredDevList.length === 0" class="text-center py-4 text-gray-500">
                         未找到匹配的 Dev 地址
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 在导航栏或设置区域添加声音开关 -->
-        <div class="flex items-center space-x-2">
-            <span class="text-sm text-gray-600">声音提示</span>
-            <button @click="soundEnabled = !soundEnabled" 
-                    class="relative inline-flex items-center h-6 rounded-full w-11"
-                    :class="soundEnabled ? 'bg-blue-600' : 'bg-gray-200'">
-                <span class="sr-only">启用声音提示</span>
-                <span class="inline-block w-4 h-4 transform transition-transform bg-white rounded-full"
-                      :class="soundEnabled ? 'translate-x-6' : 'translate-x-1'">
-                </span>
-            </button>
+        <!-- 左侧打赏按钮 暂时注释关闭-->
+        <!-- <button @click="showDonateModal = true"
+            class="fixed left-4 bottom-4 inline-flex items-center px-4 py-2 text-base font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-300 shadow-md transition-all hover:shadow-lg">
+            <svg class="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                    d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+            </svg>
+            支持作者
+        </button> -->
+
+        <!-- 右侧打赏按钮 -->
+        <button @click="showDonateModal = true"
+            class="fixed right-4 bottom-4 inline-flex items-center px-4 py-2 text-base font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-300 shadow-md transition-all hover:shadow-lg">
+            <svg class="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                    d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+            </svg>
+            支持作者
+        </button>
+
+        <!-- 打赏模态框 -->
+        <div v-if="showDonateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <!-- 模态框头部 -->
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">为服务器续航，感谢您的支持！</h3>
+                    <button @click="showDonateModal = false" class="text-gray-400 hover:text-gray-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 打赏方式选择 -->
+                <div class="mb-4">
+                    <div class="flex space-x-4 mb-4">
+                        <button v-for="method in donateMethods" :key="method.id"
+                            @click="currentDonateMethod = method.id"
+                            class="flex-1 py-2 px-4 rounded-md text-sm font-medium"
+                            :class="currentDonateMethod === method.id ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'">
+                            {{ method.name }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 二维码显示区域 -->
+                <div class="flex justify-center mb-4">
+                    <div class="relative w-96 h-96">
+                        <img v-for="method in donateMethods" :key="method.id" :src="method.qrcode" :alt="method.name"
+                            class="absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-200"
+                            :class="currentDonateMethod === method.id ? 'opacity-100' : 'opacity-0'">
+                    </div>
+                </div>
+
+                <!-- 提示文字优化 -->
+                <p class="text-sm text-gray-500 text-center mt-4">
+                    <span class="block mb-1 font-medium text-gray-700">为服务器续航，提供更稳定的服务</span>
+                    <span class="block mb-1 font-medium text-gray-700">赚钱了，在力所能及的情况下可以支持一下，感谢！</span>
+                </p>
+            </div>
         </div>
+
     </div>
 
     <script src="/js/app.js"></script>

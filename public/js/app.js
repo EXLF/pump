@@ -80,6 +80,20 @@ createApp({
             notificationSound: new Audio('/sounds/dev.mp3'), // 添加音频对象
             previousDevCount: 0, // 用于跟踪上一次的 dev 数量
             soundEnabled: true, // 添加声音开关状态
+            showDonateModal: false,
+            currentDonateMethod: 'wechat',
+            donateMethods: [
+                {
+                    id: 'wechat',
+                    name: '微信支付',
+                    qrcode: '/images/donate/wechat.png'
+                },
+                {
+                    id: 'alipay',
+                    name: '支付宝',
+                    qrcode: '/images/donate/alipay.png'
+                }
+            ]
         }
     },
     methods: {
