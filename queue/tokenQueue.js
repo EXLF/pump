@@ -27,6 +27,7 @@ tokenQueue.process(async (job) => {
             account => account.Token.Mint
         );
         const programArgs = instruction.Instruction.Program.Arguments;
+        const signer = instruction.Transaction.Signer;
 
         if (!tokenAccount) return;
 
@@ -37,7 +38,7 @@ tokenQueue.process(async (job) => {
 
         const tokenData = {
             mint: tokenAccount.Token.Mint,
-            owner: tokenAccount.Token.Owner,
+            signer: signer,
             timestamp: new Date(instruction.Block.Time),
             name: nameArg?.Value.string,
             symbol: symbolArg?.Value.string,

@@ -184,6 +184,9 @@ class BitqueryWebSocketClient extends EventEmitter {
                                     Name
                                 }
                             }
+                            Transaction {
+                                Signer
+                            }
                         }
                     }
                 }

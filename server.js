@@ -120,12 +120,13 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
             query.duplicateGroup = { $ne: null };
         }
 
-        // 使用投影只获取要的字段
+        // 在 projection 中添加 signer 字段
         const projection = {
             name: 1,
             symbol: 1,
             mint: 1,
             owner: 1,
+            signer: 1,
             timestamp: 1,
             metadata: 1,
             duplicateGroup: 1,
@@ -244,68 +245,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
     }
 });
 
-// 获取所有推特标签
-app.get('/api/twitter-labels', async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = 5; // 每页5条
-        const skip = (page - 1) * limit;
 
-        // 使用Promise.all并行执行查询
-        const [labels, total] = await Promise.all([
-            TwitterLabel.find()
-                .sort({ timestamp: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean(),
-            TwitterLabel.countDocuments()
-        ]);
-
-        res.json({
-            labels,
-            total,
-            page,
-            pages: Math.ceil(total / limit)
-        });
-    } catch (error) {
-        console.error('获取推特标签失败:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 添加或更新推特标签
-app.post('/api/twitter-labels', async (req, res) => {
-    try {
-        const { twitterUrl, label, color } = req.body;
-        
-        const result = await TwitterLabel.findOneAndUpdate(
-            { twitterUrl },
-            { 
-                twitterUrl,
-                label,
-                color,
-                timestamp: new Date()
-            },
-            { upsert: true, new: true }
-        );
-        
-        res.json(result);
-    } catch (error) {
-        console.error('保存推特标签失败:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 删除推特标签
-app.delete('/api/twitter-labels/:id', async (req, res) => {
-    try {
-        await TwitterLabel.findByIdAndDelete(req.params.id);
-        res.json({ success: true });
-    } catch (error) {
-        console.error('删除推特标签失败:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // 修改特定重复组的获取端点，添加分页支持
 app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
@@ -330,7 +270,7 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
             token.timestamp = new Date(new Date(token.timestamp).getTime());
         });
 
-        // 返回分页数据
+        // 回分页数据
         const result = {
             tokens,
             total,
@@ -456,39 +396,26 @@ app.get('/api/dev-tokens', async (req, res) => {
         // 获取所有地址别名
         const aliases = await AddressAlias.find().lean();
         if (aliases.length === 0) {
-            console.log('没有找到任何地址别名');
             return res.json([]);
         }
         
         const devAddresses = aliases.map(a => a.address);
-        console.log('找到的开发者地址:', devAddresses);
         
-        // 获取这些地址最新创建的代币，包含完整信息
         const tokens = await Token.find({
-            owner: { $in: devAddresses }
-        }, {
-            mint: 1,
-            owner: 1,
-            symbol: 1,
-            name: 1,
-            timestamp: 1,
-            metadata: 1
+            signer: { $in: devAddresses }
         })
         .sort({ timestamp: -1 })
         .lean();
 
         // 为每个代币添加开发者别名
         const tokensWithAliases = tokens.map(token => {
-            const ownerAlias = aliases.find(a => a.address === token.owner);
+            const signerAlias = aliases.find(a => a.address === token.signer);
             return {
                 ...token,
-                ownerAlias: ownerAlias ? ownerAlias.alias : null,
-                // 调整时间为 UTC+8
-                timestamp: new Date(new Date(token.timestamp).getTime())
+                signerAlias: signerAlias?.alias || null,
+                timestamp: new Date(token.timestamp)
             };
         });
-
-        console.log(`找到 ${tokens.length} 个 dev 代币`);
 
         res.json(tokensWithAliases);
     } catch (error) {

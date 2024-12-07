@@ -100,7 +100,7 @@ class TokenDataManager {
 
             const tokenData = {
                 mint: tokenAccount.Token.Mint,
-                owner: tokenAccount.Token.Owner,
+                signer: instruction.Transaction.Signer,
                 timestamp: new Date(instruction.Block.Time),
                 name: nameArg?.Value.string,
                 symbol: symbolArg?.Value.string,
@@ -238,7 +238,7 @@ class TokenDataManager {
 
     // 查找重复组
     async findDuplicateGroup(tokenData) {
-        const timeWindow = new Date(Date.now() - 1 * 60 * 60 * 1000); // 1小时时间窗��
+        const timeWindow = new Date(Date.now() - 1 * 60 * 60 * 1000); // 1小时时间窗
         let highestPriorityMatch = null;
 
         // 按优先级顺序检查每种重复类型
@@ -315,6 +315,9 @@ class TokenDataManager {
     // 获取重复组统计信息
     async getDuplicateStats() {
         try {
+            const tokens = await Token.find({
+                signer: { $in: this.devAddresses }
+            });
             const stats = await Token.aggregate([
                 {
                     $match: { 

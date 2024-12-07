@@ -98,7 +98,7 @@ createApp({
         
         formatAddress(address) {
             if (!address) return '';
-            return address.slice(0, 4) + '...' + address.slice(-4);
+            return `${address.slice(0, 4)}...${address.slice(-4)}`;
         },
         
         handleImageError(event, token) {
@@ -113,7 +113,7 @@ createApp({
                 const url = link.toLowerCase().trim();
                 
                 if (!url.includes('twitter.com') && !url.includes('x.com')) {
-                    return 'text-red-500';  // 无效接
+                    return 'text-red-500';  // 无效
                 }
                 
                 if (url.includes('/status/')) {
@@ -155,11 +155,11 @@ createApp({
         },
         
         getDuplicateColor(token) {
-            if (!token.duplicateGroup && !this.addressAliases.has(token.owner)) return '';
+            if (!token.duplicateGroup && !this.addressAliases.has(token.signer)) return '';
             
             // 如果是dev地址（有别名），使用渐变背景色和细微的动画效果
-            if (this.addressAliases.has(token.owner)) {
-                return 'dev-token-highlight';  // 确保这个类名和CSS中的一致
+            if (this.addressAliases.has(token.signer)) {
+                return 'dev-token-highlight';
             }
             
             // 推特重复的保持绿色背景
@@ -219,7 +219,7 @@ createApp({
                     page: this.currentPage
                 };
                 
-                // 优先处理特定组的查询
+                // 优先处理特��组的查询
                 if (this.selectedDuplicateGroup) {
                     params.groupNumber = this.selectedDuplicateGroup;
                 } else if (this.activeTab === 'duplicates') {
@@ -325,7 +325,7 @@ createApp({
         async saveTwitterLabel() {
             try {
                 if (!this.newLabel.twitterUrl || !this.newLabel.label) {
-                    alert('请填写完整的标签信息');
+                    alert('请填写完整标签信息');
                     return;
                 }
 
@@ -894,7 +894,7 @@ createApp({
             console.log('尝试编辑地址:', address); // 添加日志
             console.log('当前别名Map:', this.addressAliases); // 添加日志
             
-            // 如果已经有别名，则不允许编辑
+            // 如果��有别名，则不允许编辑
             if (this.addressAliases.has(address)) {
                 console.log('该地址已有别名，不允许编辑'); // 添加日志
                 return;
@@ -908,14 +908,13 @@ createApp({
         },
 
         // 修改地址显示的方法
-        formatOwnerDisplay(owner) {
-            const alias = this.addressAliases.get(owner);
+        formatOwnerDisplay(token) {
+            const address = token.signer;  // 改为使用 signer
+            const alias = this.addressAliases.get(address);
             if (alias) {
-                // 如果有别名，只显示别名，不可点击
                 return `<span class="text-gray-700">${alias}</span>`;
             } else {
-                // 如果没有别名，显示地址并允许点击编辑
-                return `<span class="cursor-pointer hover:text-blue-500" onclick="showEditAlias('${owner}')">${this.formatAddress(owner)}</span>`;
+                return `<span class="cursor-pointer hover:text-blue-500">${this.formatAddress(address)}</span>`;
             }
         },
 
@@ -948,14 +947,29 @@ createApp({
             return this.addressAliases.get(address) || this.formatShortAddress(address);
         },
 
+        // 格式化显示 Dev 地址
+        formatDevAddress(token) {
+            return token.signerAlias || this.formatAddress(token.signer);
+        },
+
         // 获取 Dev 代币列表
         async fetchDevTokens() {
             try {
                 console.log('开始获取 Dev 代币');
                 const response = await axios.get('/api/dev-tokens');
                 console.log('获取到的 Dev 代币:', response.data);
-                this.devTokens = response.data;
-                console.log('当前 devTokens 长度:', this.devTokens.length);
+                
+                // 确保每个代币对象都包含必要的字段
+                this.devTokens = response.data.map(token => ({
+                    ...token,
+                    signer: token.signer,  // 确保有 signer 字段
+                    signerAlias: token.signerAlias,  // 确保有 signerAlias 字段
+                    displayName: token.signerAlias || this.formatAddress(token.signer)
+                }));
+                
+                // 计算总页数
+                this.devPages = Math.ceil(this.devTokens.length / this.devPageSize);
+                console.log('处理后的 devTokens:', this.devTokens);
             } catch (error) {
                 console.error('获取 Dev 代币失败:', error);
             }
@@ -999,7 +1013,7 @@ createApp({
                 await this.fetchDevTokens();
                 await this.fetchAddressAliases();
                 
-                // 重置表单并关闭模态框
+                // 重置单并关闭模态框
                 this.newDev = { address: '', alias: '' };
                 this.devAddError = '';
                 this.devAddressExists = false;
@@ -1026,13 +1040,39 @@ createApp({
         },
 
         // 在显示别名的地方添加类名
-        getDisplayName(address) {
-            if (this.addressAliases.has(address)) {
-                // 确保使用v-html来渲染HTML字符串
-                return `<span class="dev-name-highlight">${this.addressAliases.get(address)}</span>`;
+        getDisplayName(signer) {
+            if (this.addressAliases.has(signer)) {
+                return `<span class="dev-name-highlight">${this.addressAliases.get(signer)}</span>`;
             }
-            return this.formatAddress(address);
-        }
+            return this.formatAddress(signer);
+        },
+
+        // 格式化显示 Dev 地址
+        formatDevDisplay(token) {
+            return token.signerAlias || this.formatAddress(token.signer);
+        },
+
+        // 获取显示名称
+        getDisplayName(token) {
+            if (this.addressAliases.has(token.signer)) {
+                return this.addressAliases.get(token.signer);
+            }
+            return this.formatAddress(token.signer);
+        },
+
+        // 加载地址别名
+        async loadAddressAliases() {
+            try {
+                const response = await axios.get('/api/address-aliases');
+                const aliases = response.data;
+                this.addressAliases.clear();
+                aliases.forEach(alias => {
+                    this.addressAliases.set(alias.address, alias.alias);
+                });
+            } catch (error) {
+                console.error('加载地址别名失败:', error);
+            }
+        },
     },
     mounted() {
         this.fetchTokens();
@@ -1071,6 +1111,8 @@ createApp({
         setInterval(() => {
             this.fetchDevTokens();
         }, 30000);
+
+        this.loadAddressAliases();
     },
     beforeUnmount() {
         if (this.refreshInterval) {

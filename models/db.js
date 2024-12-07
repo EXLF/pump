@@ -43,7 +43,7 @@ const tokenSchema = new mongoose.Schema({
         required: true, 
         unique: true 
     },
-    owner: {
+    signer: {
         type: String,
         required: true
     },
@@ -78,7 +78,7 @@ const tokenSchema = new mongoose.Schema({
 // 添加索引以提高查询性能
 // 为所有字段添加索引
 tokenSchema.index({ mint: 1 });
-tokenSchema.index({ owner: 1 });
+tokenSchema.index({ signer: 1 });
 tokenSchema.index({ name: 1 });
 tokenSchema.index({ symbol: 1 });
 tokenSchema.index({ timestamp: 1 });

@@ -14,9 +14,17 @@ function initializeWebSocket(server) {
 
 function broadcastUpdate(data) {
     if (wss) {
+        const tokensWithSigner = data.data.map(token => ({
+            ...token,
+            signer: token.signer
+        }));
+
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(data));
+                client.send(JSON.stringify({
+                    ...data,
+                    data: tokensWithSigner
+                }));
             }
         });
     }

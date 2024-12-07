@@ -1,7 +1,7 @@
 /* Dev代币高亮效果 */
 .dev-token-highlight {
     background: linear-gradient(
-        110deg,
+        90deg,
         rgba(98, 171, 255, 0.3) 0%,    /* 蓝色 */
         rgba(70, 50, 255, 0.3) 25%,   /* 紫色 */
         rgba(255, 78, 166, 0.3) 50%,    /* 粉色 */
@@ -15,17 +15,17 @@
 /* 背景渐变动画 */
 @keyframes gradient {
     0% {
-        background-position: 0% 50%;
+        background-position: 200% 50%;
     }
     100% {
-        background-position: 200% 50%;
+        background-position: 0% 50%;
     }
 }
 
 /* 鼠标悬停效果 */
 .dev-token-highlight:hover {
     background: linear-gradient(
-        110deg,
+        90deg,
         rgba(98, 171, 255, 0.4) 0%,    /* 蓝色 */
         rgba(79, 255, 108, 0.4) 25%,   /* 紫色 */
         rgba(255, 78, 166, 0.4) 50%,    /* 粉色 */
@@ -34,15 +34,4 @@
     );
 }
 
-/* Dev别名金色字体效果 */
-.dev-name-highlight {
-    color: #FFD700 !important;  /* 添加!important确保优先级 */
-    font-weight: 600;
-    text-shadow: 0 0 1px rgba(255, 215, 0, 0.3);
-}
-
-/* 确保样式不被覆盖 */
-td .dev-name-highlight {
-    color: #FFD700 !important;
-}
  
