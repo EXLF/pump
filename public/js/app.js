@@ -1,5 +1,118 @@
 const { createApp } = Vue;
 
+// 添加 IndexedDB 缓存管理类
+class TokenCache {
+    constructor() {
+        this.dbName = 'tokenCache';
+        this.storeName = 'tokens';
+        this.db = null;
+        this.isSupported = this.checkSupport();
+    }
+
+    async initDB() {
+        try {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(this.dbName, 1);
+                
+                request.onerror = () => reject(request.error);
+                
+                request.onsuccess = (event) => {
+                    this.db = event.target.result;
+                    resolve(this.db);
+                };
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(this.storeName)) {
+                        const store = db.createObjectStore(this.storeName, { keyPath: 'mint' });
+                        // 创建索引以支持本地搜索
+                        store.createIndex('timestamp', 'timestamp', { unique: false });
+                        store.createIndex('signer', 'signer', { unique: false });
+                        store.createIndex('name', 'name', { unique: false });
+                    }
+                };
+            });
+        } catch (error) {
+            console.error('初始化缓存数据库失败:', error);
+        }
+    }
+
+    async shouldRefreshCache() {
+        if (!this.lastUpdate) return true;
+        
+        const now = new Date().getTime();
+        return (now - this.lastUpdate) > this.cacheExpiration;
+    }
+
+    async getTokens(page, pageSize, filters = {}) {
+        if (!this.isSupported || !this.db) return null;
+        
+        try {
+            console.log('尝试从缓存获取数据');
+            const tx = this.db.transaction(this.storeName, 'readonly');
+            const store = tx.objectStore(this.storeName);
+            
+            const tokens = await new Promise((resolve, reject) => {
+                const request = store.getAll();
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+
+            // 应用过滤器
+            let filteredTokens = tokens;
+            if (filters.search) {
+                const searchTerm = filters.search.toLowerCase();
+                filteredTokens = filteredTokens.filter(token => 
+                    token.name?.toLowerCase().includes(searchTerm) ||
+                    token.symbol?.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // 计算分页
+            const start = (page - 1) * pageSize;
+            const paginatedTokens = filteredTokens.slice(start, start + pageSize);
+
+            console.log(`从缓存获取到 ${paginatedTokens.length} 条数据`);
+            return {
+                tokens: paginatedTokens,
+                total: filteredTokens.length
+            };
+        } catch (error) {
+            console.error('从缓存获取数据失败:', error);
+            return null;
+        }
+    }
+
+    async saveTokens(tokens) {
+        if (!this.isSupported || !this.db) return;
+        
+        try {
+            console.log(`正在缓存 ${tokens.length} 条新数据`);
+            const tx = this.db.transaction(this.storeName, 'readwrite');
+            const store = tx.objectStore(this.storeName);
+            
+            // 不再清除旧数据，而是更新或添加新数据
+            for (const token of tokens) {
+                await store.put(token);
+            }
+            
+            console.log('数据缓存成功');
+        } catch (error) {
+            console.error('缓存保存失败:', error);
+        }
+    }
+
+    async clearCache() {
+        try {
+            const tx = this.db.transaction(this.storeName, 'readwrite');
+            const store = tx.objectStore(this.storeName);
+            await store.clear();
+        } catch (error) {
+            console.error('清除缓存失败:', error);
+        }
+    }
+}
+
 createApp({
     data() {
         return {
@@ -93,7 +206,11 @@ createApp({
                     name: '支付宝',
                     qrcode: '/images/donate/alipay.png'
                 }
-            ]
+            ],
+            tokenCache: null,
+            isCacheEnabled: true,
+            lastCacheUpdate: null,
+            websocket: null,
         }
     },
     methods: {
@@ -1126,6 +1243,75 @@ createApp({
                 });
             } catch (error) {
                 console.error('播放提示音时发生错误:', error);
+            }
+        },
+
+        // 清除缓存的方法
+        async clearTokenCache() {
+            if (this.tokenCache) {
+                await this.tokenCache.clearCache();
+                this.lastCacheUpdate = null;
+            }
+        },
+
+        // 刷新数据的方法
+        async refreshData() {
+            await this.clearTokenCache();
+            await this.loadTokens(this.currentPage);
+        },
+
+        initWebSocket() {
+            this.websocket = new WebSocket(`ws://${window.location.host}`);
+            
+            this.websocket.onmessage = async (event) => {
+                const { type, data } = JSON.parse(event.data);
+                if (type === 'tokensUpdate') {
+                    // 收到新数据时，更新缓存
+                    await this.tokenCache?.saveTokens(data);
+                    // 如果是当前页的数据，直接更新显示
+                    await this.loadTokens(this.currentPage);
+                }
+            };
+
+            this.websocket.onclose = () => {
+                console.log('WebSocket 连接已关闭，尝试重新连接...');
+                setTimeout(() => this.initWebSocket(), 5000);
+            };
+        },
+
+        async loadTokens(page = 1) {
+            try {
+                // 1. 首先尝试从缓存加载
+                const cachedData = await this.tokenCache?.getTokens(
+                    page, 
+                    this.pageSize, 
+                    { search: this.searchQuery }
+                );
+
+                if (cachedData) {
+                    console.log('使用缓存数据');
+                    this.tokens = cachedData.tokens;
+                    this.totalTokens = cachedData.total;
+                    return;
+                }
+
+                // 2. 如果缓存未命中，从服务器加载
+                console.log('从服务器获取数据');
+                const response = await axios.get(`/api/tokens`, {
+                    params: {
+                        page: page,
+                        pageSize: this.pageSize,
+                        search: this.searchQuery
+                    }
+                });
+
+                this.tokens = response.data.tokens;
+                this.totalTokens = response.data.total;
+
+                // 3. 保存到缓存
+                await this.tokenCache?.saveTokens(response.data.tokens);
+            } catch (error) {
+                console.error('加载令牌失败:', error);
             }
         },
     },
