@@ -5,7 +5,7 @@ module.exports = {
         script: "server.js",
         watch: true,
         ignore_watch: ["node_modules", "logs"],
-        instances: 2,
+        instances: 1,
         exec_mode: "fork",
         env: {
           NODE_ENV: "production",
@@ -21,7 +21,7 @@ module.exports = {
         script: "getTokenInfo.js",
         watch: true,
         ignore_watch: ["node_modules", "logs"],
-        instances: 2,
+        instances: 1,
         exec_mode: "fork",
         env: {
           NODE_ENV: "production"
