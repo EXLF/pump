@@ -208,11 +208,11 @@ app.get('/api/duplicate-tokens', async (req, res) => {
             if (tokens.length < 2) return null; // 跳过只有一个代币的组
 
             // 获取最新和最早的时间戳，并统一加4小时调整时区
-            const latestTime = new Date(tokens[0].timestamp).getTime() - 4 * 60 * 60 * 1000;
+            const latestTime = new Date(tokens[0].timestamp).getTime();
             const previousTime = tokens[1]?.timestamp 
-                ? new Date(tokens[1].timestamp).getTime() - 4 * 60 * 60 * 1000 
+                ? new Date(tokens[1].timestamp).getTime() 
                 : null;
-            const firstTime = new Date(tokens[tokens.length - 1].timestamp).getTime() - 4 * 60 * 60 * 1000;
+            const firstTime = new Date(tokens[tokens.length - 1].timestamp).getTime();
 
             // 检查是否有完整的推特链接
             const twitterToken = tokens.find(t => 
@@ -265,7 +265,7 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
             Token.countDocuments({ duplicateGroup: groupNumber })
         ]);
 
-        // 调整时间为 UTC+8
+        // 所有代币、重复代币 调整时间为 UTC+8
         tokens.forEach(token => {
             token.timestamp = new Date(new Date(token.timestamp).getTime());
         });
@@ -369,6 +369,7 @@ setInterval(async () => {
 app.get('/api/address-aliases', async (req, res) => {
     try {
         const aliases = await AddressAlias.find().lean();
+        console.log('查询到的地址别名:', aliases);
         res.json(aliases);
     } catch (error) {
         res.status(500).json({ error: error.message });
