@@ -1,4 +1,6 @@
 const TokenDataManager = require('./TokenDataManager');
+const { connectDB } = require('./models/db');
+const mongoose = require('mongoose');
 
 async function main() {
     console.log(JSON.stringify({
@@ -7,6 +9,13 @@ async function main() {
     }, null, 2));
 
     try {
+        // 先连接数据库
+        await connectDB();
+        
+        // 等待确保数据库连接完全建立
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // 初始化 TokenManager
         const tokenManager = new TokenDataManager();
         tokenManager.initialize();
 
@@ -15,8 +24,10 @@ async function main() {
             console.error('Unhandled rejection:', error);
         });
 
-        process.on('SIGINT', () => {
+        process.on('SIGINT', async () => {
             console.log('Gracefully shutting down...');
+            // 关闭数据库连接
+            await mongoose.connection.close();
             process.exit(0);
         });
 

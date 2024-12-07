@@ -12,9 +12,8 @@ class BitqueryWebSocketClient extends EventEmitter {
         this.apiKeys = [];
         this.currentKeyIndex = 0;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = parseInt(process.env.MAX_RECONNECT_ATTEMPTS, 10) || 5;
+        this.maxReconnectAttempts = parseInt(process.env.MAX_RECONNECT_ATTEMPTS, 10) || 2;
         this.reconnectDelay = parseInt(process.env.RECONNECT_DELAY, 10) || 2000;
-        this.isRotating = false;
     }
 
     async loadApiKeys() {
@@ -32,13 +31,17 @@ class BitqueryWebSocketClient extends EventEmitter {
             await this.loadApiKeys();
         }
         
+        if (this.currentKeyIndex >= this.apiKeys.length) {
+            this.currentKeyIndex = 0;
+        }
+
         const currentKey = this.apiKeys[this.currentKeyIndex];
         if (!currentKey) {
             console.error("没有可用的 API keys");
             return;
         }
 
-        console.log(`正在使用 API Key: ${currentKey}`);
+        console.log(`正在使用 API Key: ${currentKey.substring(0, 10)}...`);
         this.ws = new WebSocket(
             `wss://streaming.bitquery.io/eap?token=${currentKey}`,
             ["graphql-ws"]
@@ -110,14 +113,14 @@ class BitqueryWebSocketClient extends EventEmitter {
     async disableCurrentKey() {
         try {
             const currentKey = this.apiKeys[this.currentKeyIndex];
-            await fetch(`${process.env.BASE_URL}/api/keys/disable`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ key: currentKey })
-            });
+            await ApiKey.findOneAndUpdate(
+                { key: currentKey },
+                { isActive: false }
+            );
             console.log(`已禁用 API key: ${currentKey}`);
+            
+            this.apiKeys.splice(this.currentKeyIndex, 1);
+            
         } catch (error) {
             console.error('禁用 API key 失败:', error);
         }
@@ -128,23 +131,22 @@ class BitqueryWebSocketClient extends EventEmitter {
             this.ws.close();
             this.ws = null;
         }
-        
-        if (this.isRotating) return;
-        this.isRotating = true;
 
-        await this.loadApiKeys();
+        if (this.currentKeyIndex >= this.apiKeys.length - 1) {
+            await this.loadApiKeys();
+            this.currentKeyIndex = 0;
+        } else {
+            this.currentKeyIndex++;
+        }
         
         if (this.apiKeys.length === 0) {
             console.error("没有可用的 API keys");
-            this.isRotating = false;
             return;
         }
-        
-        this.currentKeyIndex = 0;
+
         this.reconnectAttempts = 0;
         console.log("切换到新的 API key");
         await this.connect();
-        this.isRotating = false;
     }
 
     sendSubscription() {
