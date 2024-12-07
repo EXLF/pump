@@ -14,6 +14,10 @@ class BitqueryWebSocketClient extends EventEmitter {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = parseInt(process.env.MAX_RECONNECT_ATTEMPTS, 10) || 2;
         this.reconnectDelay = parseInt(process.env.RECONNECT_DELAY, 10) || 2000;
+        this.messageBuffer = [];
+        this.batchSize = 10;
+        this.batchInterval = 1000;
+        this.processingInterval = null;
     }
 
     async loadApiKeys() {
@@ -56,6 +60,7 @@ class BitqueryWebSocketClient extends EventEmitter {
             this.reconnectAttempts = 0;
             const initMessage = JSON.stringify({ type: "connection_init" });
             this.ws.send(initMessage);
+            this.startMessageProcessing();
         });
 
         this.ws.on("message", async (data) => {
@@ -70,7 +75,7 @@ class BitqueryWebSocketClient extends EventEmitter {
 
                     case "data":
                         if (response.payload.data?.Solana?.Instructions?.length > 0) {
-                            await this.tokenManager.processWebSocketData(response.payload.data);
+                            this.messageBuffer.push(response.payload.data);
                         }
                         break;
 
@@ -85,6 +90,7 @@ class BitqueryWebSocketClient extends EventEmitter {
 
         this.ws.on("close", () => {
             console.log("WebSocket 连接已关闭");
+            this.stopMessageProcessing();
             this.attemptReconnect();
         });
 
@@ -196,6 +202,42 @@ class BitqueryWebSocketClient extends EventEmitter {
 
         this.ws.send(subscriptionMessage);
         console.log("订阅消息已发送");
+    }
+
+    startMessageProcessing() {
+        if (this.processingInterval) {
+            clearInterval(this.processingInterval);
+        }
+        
+        this.processingInterval = setInterval(async () => {
+            if (this.messageBuffer.length === 0) return;
+
+            const batchToProcess = this.messageBuffer.splice(0, this.batchSize);
+            if (batchToProcess.length > 0) {
+                try {
+                    await this.processBatch(batchToProcess);
+                } catch (error) {
+                    console.error('批处理消息时出错:', error);
+                }
+            }
+        }, this.batchInterval);
+    }
+
+    stopMessageProcessing() {
+        if (this.processingInterval) {
+            clearInterval(this.processingInterval);
+            this.processingInterval = null;
+        }
+    }
+
+    async processBatch(messages) {
+        try {
+            await Promise.all(messages.map(message => 
+                this.tokenManager.processWebSocketData(message)
+            ));
+        } catch (error) {
+            console.error('处理消息批次时出错:', error);
+        }
     }
 }
 
