@@ -77,6 +77,9 @@ createApp({
             showDevListModal: false,
             devList: [],
             devSearchQuery: '',
+            notificationSound: new Audio('/sounds/dev.mp3'), // 添加音频对象
+            previousDevCount: 0, // 用于跟踪上一次的 dev 数量
+            soundEnabled: true, // 添加声音开关状态
         }
     },
     methods: {
@@ -962,13 +965,24 @@ createApp({
                 const response = await axios.get('/api/dev-tokens');
                 console.log('获取到的 Dev 代币:', response.data);
                 
+                // 保存当前数据长度
+                const currentCount = response.data.length;
+                
                 // 确保每个代币对象都包含必要的字段
                 this.devTokens = response.data.map(token => ({
                     ...token,
-                    signer: token.signer,  // 确保有 signer 字段
-                    signerAlias: token.signerAlias,  // 确保有 signerAlias 字段
+                    signer: token.signer,
+                    signerAlias: token.signerAlias,
                     displayName: token.signerAlias || this.formatAddress(token.signer)
                 }));
+                
+                // 检查是否有新数据并播放提示音
+                if (this.previousDevCount > 0 && currentCount > this.previousDevCount) {
+                    this.playNotificationSound();
+                }
+                
+                // 更新计数
+                this.previousDevCount = currentCount;
                 
                 // 计算总页数
                 this.devPages = Math.ceil(this.devTokens.length / this.devPageSize);
@@ -1084,6 +1098,20 @@ createApp({
                 this.devList = response.data;
             } catch (error) {
                 console.error('获取 Dev 列表失败:', error);
+            }
+        },
+
+        // 添加播放提示音的方法
+        playNotificationSound() {
+            if (!this.soundEnabled) return; // 检查是否启用了声音
+            
+            try {
+                this.notificationSound.currentTime = 0;
+                this.notificationSound.play().catch(error => {
+                    console.error('播放提示音失败:', error);
+                });
+            } catch (error) {
+                console.error('播放提示音时发生错误:', error);
             }
         },
     },

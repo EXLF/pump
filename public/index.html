@@ -457,13 +457,25 @@
                                         Dev 列表
                                     </button>
                                     <!-- 添加 Dev 按钮 -->
-                                    <button @click="showAddDevModal = true" 
-                                            class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
+                                    <button @click="showAddDevModal = true"
+                                        class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
                                         <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                                         </svg>
                                         添加 Dev
                                     </button>
+                                    <!-- 声音提示开关 -->
+                                    <div class="flex items-center mr-2">
+                                        <span class="text-xs text-gray-600 mr-2">启用声音提示</span>
+                                        <button @click="soundEnabled = !soundEnabled" 
+                                                class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out"
+                                                :class="soundEnabled ? 'bg-blue-600' : 'bg-gray-200'">
+                                            <span class="sr-only">启用声音提示</span>
+                                            <span class="inline-block w-4 h-4 transform transition-transform duration-200 ease-in-out bg-white rounded-full shadow-sm"
+                                                  :class="soundEnabled ? 'translate-x-6' : 'translate-x-1'">
+                                            </span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1030,6 +1042,19 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- 在导航栏或设置区域添加声音开关 -->
+        <div class="flex items-center space-x-2">
+            <span class="text-sm text-gray-600">声音提示</span>
+            <button @click="soundEnabled = !soundEnabled" 
+                    class="relative inline-flex items-center h-6 rounded-full w-11"
+                    :class="soundEnabled ? 'bg-blue-600' : 'bg-gray-200'">
+                <span class="sr-only">启用声音提示</span>
+                <span class="inline-block w-4 h-4 transform transition-transform bg-white rounded-full"
+                      :class="soundEnabled ? 'translate-x-6' : 'translate-x-1'">
+                </span>
+            </button>
         </div>
     </div>
 
