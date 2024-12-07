@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunk_bull_board_ui=self.webpackChunk_bull_board_ui||[]).push([["27412"],{92160:function(e,t){Object.defineProperty(t,"__esModule",{value:!0}),t.default=void 0;var u={lastWeek:"'上個'eeee p",yesterday:"'昨天' p",today:"'今天' p",tomorrow:"'明天' p",nextWeek:"'下個'eeee p",other:"P"};t.default=function(e,t,o,r){return u[e]},e.exports=t.default}}]);
