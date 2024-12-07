@@ -1,6 +1,7 @@
 const TokenDataManager = require('./TokenDataManager');
 const { connectDB } = require('./models/db');
 const mongoose = require('mongoose');
+const cleanupTask = require('./tasks/cleanupTask');
 
 async function main() {
     console.log(JSON.stringify({
@@ -14,6 +15,9 @@ async function main() {
         
         // 等待确保数据库连接完全建立
         await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // 启动清理任务
+        await cleanupTask.start();
 
         // 初始化 TokenManager
         const tokenManager = new TokenDataManager();
@@ -42,3 +46,4 @@ main().catch(error => {
     console.error('程序错误:', error);
     process.exit(1);
 });
+
