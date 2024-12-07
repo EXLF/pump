@@ -5,8 +5,8 @@ class DatabaseCleanupTask {
     constructor() {
         // 每小时执行一次
         this.cleanupSchedule = '0 * * * *';
-        // 保留8小时的数据
-        this.retentionPeriod = 24 * 60 * 60 * 1000;
+        // 保留12小时的数据
+        this.retentionPeriod = 12 * 60 * 60 * 1000;
     }
 
     async start() {
