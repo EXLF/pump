@@ -75,44 +75,11 @@ const tokenSchema = new mongoose.Schema({
     timestamps: true // 添加 createdAt 和 updatedAt
 });
 
-// 添加复合索引，用于常用的组合查询
-tokenSchema.index({ mint: 1, timestamp: -1 }); // mint 查询时通常需要时间排序
-tokenSchema.index({ signer: 1, timestamp: -1 }); // signer 查询时通常需要时间排序
 
-// 保留最常用的单字段索引
-tokenSchema.index({ timestamp: -1 }); // 使用 -1 支持时间倒序查询
-tokenSchema.index({ duplicateGroup: 1 });
-tokenSchema.index({ duplicateType: 1 });
+// 必要复合索引
+tokenSchema.index({ duplicateGroup: 1, timestamp: -1 }); // 优先使用这个复合索引
 
-// 为常用的元数据字段创建稀疏索引
-tokenSchema.index({ 'metadata.twitter': 1 }, { sparse: true });
-tokenSchema.index({ 'metadata.telegram': 1 }, { sparse: true });
-tokenSchema.index({ 'metadata.website': 1 }, { sparse: true });
 
-// 创建文本索引用于搜索
-tokenSchema.index(
-    { 
-        name: 'text',
-        symbol: 'text',
-        'metadata.description': 'text' 
-    },
-    {
-        weights: {
-            name: 10,
-            symbol: 5,
-            'metadata.description': 1
-        },
-        name: "TokenTextIndex"
-    }
-);
-
-// 部分索引 - 只为活跃记录创建索引
-tokenSchema.index(
-    { 'metadata.showName': 1 },
-    { 
-        partialFilterExpression: { 'metadata.showName': { $exists: true } }
-    }
-);
 
 // 添加地址别名 Schema
 const addressAliasSchema = new mongoose.Schema({
