@@ -92,11 +92,11 @@ function normalizeTwitterUrl(url) {
 }
 
 // 获取代币列表
-app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
+app.get('/api/tokens', cacheMiddleware(30), async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const duplicatesOnly = req.query.duplicatesOnly === 'true';
-        const groupNumber = req.query.groupNumber ? parseInt(req.query.groupNumber) : null; // 确保转换为数字
+        const groupNumber = req.query.groupNumber ? parseInt(req.query.groupNumber) : null;
         
         // 修改缓存键，加入组号
         const cacheKey = `tokens_page_${page}_${duplicatesOnly}_${groupNumber || 'all'}`;
@@ -113,32 +113,33 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
         // 构建查询条件
         let query = {};
         if (groupNumber !== null) {
-            // 查询特定重复组
             query.duplicateGroup = groupNumber;
         } else if (duplicatesOnly) {
-            // 查询所有重复代币
             query.duplicateGroup = { $ne: null };
         }
 
-        // 在 projection 中添加 signer 字段
+        // 使用投影减少返回的字段
         const projection = {
+            mint: 1,
+            signer: 1,
             name: 1,
             symbol: 1,
-            mint: 1,
-            owner: 1,
-            signer: 1,
             timestamp: 1,
-            metadata: 1,
             duplicateGroup: 1,
-            duplicateType: 1
+            duplicateType: 1,
+            'metadata.uri': 1,
+            'metadata.image': 1,
+            'metadata.twitter': 1
         };
 
+        // 并行执行查询
         const [tokens, total] = await Promise.all([
-            Token.find(query, projection)
-                .lean()
+            Token.find(query)
+                .select(projection)
                 .sort({ timestamp: -1 })
                 .skip(skip)
-                .limit(limit),
+                .limit(limit)
+                .lean(),
             Token.countDocuments(query)
         ]);
 
@@ -159,7 +160,7 @@ app.get('/api/tokens', cacheMiddleware(5), async (req, res) => {
         
         res.json(result);
     } catch (error) {
-        console.error('获取数据失败:', error);
+        console.error('查询失败:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -392,7 +393,7 @@ app.post('/api/address-aliases', async (req, res) => {
 });
 
 // 修改 Dev 代币列表接口
-app.get('/api/dev-tokens', cacheMiddleware(2), async (req, res) => { // 只缓存2秒
+app.get('/api/dev-tokens', cacheMiddleware(10), async (req, res) => { // 只缓存10秒
     try {
         const aliases = await AddressAlias.find().lean();
         if (aliases.length === 0) {

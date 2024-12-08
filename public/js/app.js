@@ -229,21 +229,21 @@ createApp({
         async fetchTokens(forceRefresh = false) {
             if (this.loading && !forceRefresh) return;
             
-            const cacheKey = `tokens_${this.currentPage}_${this.activeTab}`;
-            const cachedData = sessionStorage.getItem(cacheKey);
-            
-            if (cachedData && !forceRefresh) {
-                const parsed = JSON.parse(cachedData);
-                if (Date.now() - parsed.timestamp < 5000) { // 5秒缓存
-                    this.updateTokensData(parsed.data);
-                    return;
-                }
-            }
-
             this.loading = true;
             this.error = null;
             
             try {
+                const cacheKey = `tokens_${this.currentPage}_${this.activeTab}`;
+                const cachedData = sessionStorage.getItem(cacheKey);
+                
+                if (cachedData && !forceRefresh) {
+                    const parsed = JSON.parse(cachedData);
+                    if (Date.now() - parsed.timestamp < 5000) { // 5秒缓存
+                        this.updateTokensData(parsed.data);
+                        return;
+                    }
+                }
+
                 let params = { 
                     page: this.currentPage
                 };
@@ -315,16 +315,21 @@ createApp({
         },
 
         async showDuplicateGroupTokens(group) {
+            if (this.loading) return;
+            
             try {
+                this.loading = true;
                 this.selectedDuplicateGroup = group.groupNumber;
                 this.selectedGroupSymbol = group.symbol;
                 this.currentPage = 1;
                 this.activeTab = 'duplicates';
                 
-                await this.fetchDuplicateGroupTokens();
+                await this.fetchTokens();
                 this.updatePageTitle();
             } catch (error) {
                 console.error('获取重复组代币失败:', error);
+            } finally {
+                this.loading = false;
             }
         },
 
@@ -856,7 +861,7 @@ createApp({
                     alias: this.newDev.alias
                 });
                 
-                // 重新获取 Dev 列���
+                // 重新获取 Dev 列表
                 await this.fetchDevTokens();
                 await this.fetchAddressAliases();
                 

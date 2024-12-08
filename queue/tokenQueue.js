@@ -1,18 +1,30 @@
 const Queue = require('bull');
+const Redis = require('ioredis');
 const { Token } = require('../models/db');
 const { broadcastUpdate } = require('../websocket');
 const axios = require('axios');
+
+// 创建Redis客户端
+const redis = new Redis({
+    port: 6379,
+    host: '127.0.0.1',
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false
+});
 
 // 创建队列实例
 const tokenQueue = new Queue('tokenProcessing', {
     redis: {
         port: 6379,
         host: '127.0.0.1',
-        // password: 'your-redis-password' // 如果有密码
     },
     limiter: {
-        max: 1000, // 最大并发处理数
-        duration: 5000 // 时间窗口（毫秒）
+        max: 1000,
+        duration: 5000
+    },
+    defaultJobOptions: {
+        removeOnComplete: 100,
+        removeOnFail: 100
     }
 });
 
