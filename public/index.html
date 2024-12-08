@@ -336,26 +336,12 @@
                                             <td class="px-6 py-5 whitespace-nowrap">
                                                 <div class="flex items-center gap-2">
                                                     <!-- 推特标签（如果存在） -->
-                                                    <span v-if="getTwitterLabel(token.metadata?.twitter)" :style="{
-                                                              backgroundColor: getTwitterLabel(token.metadata?.twitter).color,
-                                                              color: '#FFFFFF',
-                                                              padding: '2px 8px',
-                                                              borderRadius: '9999px',
-                                                              fontSize: '0.75rem',
-                                                              lineHeight: '1rem'
-                                                          }" class="inline-flex items-center">
-                                                        {{ getTwitterLabel(token.metadata?.twitter).label }}
-                                                    </span>
-
-                                                    <!-- 推特链接 -->
                                                     <a v-if="token.metadata?.twitter" :href="token.metadata.twitter"
-                                                        target="_blank" class="inline-flex items-center" :class="[
-                                                           {
-                                                               'text-green-500': isFullTwitterLink(token.metadata.twitter),
-                                                               'text-yellow-500': isTwitterAccountLink(token.metadata.twitter),
-                                                               'text-red-500': !isValidTwitterLink(token.metadata.twitter)
-                                                           }
-                                                       ]">
+                                                        target="_blank" class="inline-flex items-center" :class="[{
+                                                           'text-green-500': isFullTwitterLink(token.metadata.twitter),
+                                                           'text-yellow-500': isTwitterAccountLink(token.metadata.twitter),
+                                                           'text-red-500': !isValidTwitterLink(token.metadata.twitter)
+                                                       }]">
                                                         <svg class="w-4 h-4 mr-1" fill="currentColor"
                                                             viewBox="0 0 24 24">
                                                             <path
@@ -572,18 +558,6 @@
                                                 <td class="px-6 py-5 whitespace-nowrap">
                                                     <div class="flex items-center gap-2">
                                                         <!-- 推特标签（如果存在） -->
-                                                        <span v-if="getTwitterLabel(token.metadata?.twitter)" :style="{
-                                                                  backgroundColor: getTwitterLabel(token.metadata?.twitter).color,
-                                                                  color: '#FFFFFF',
-                                                                  padding: '2px 8px',
-                                                                  borderRadius: '9999px',
-                                                                  fontSize: '0.75rem',
-                                                                  lineHeight: '1rem'
-                                                              }" class="inline-flex items-center">
-                                                            {{ getTwitterLabel(token.metadata?.twitter).label }}
-                                                        </span>
-
-                                                        <!-- 推特链接 -->
                                                         <a v-if="token.metadata?.twitter" :href="token.metadata.twitter"
                                                             target="_blank" class="inline-flex items-center" :class="[{
                                                                'text-green-500': isFullTwitterLink(token.metadata.twitter),
@@ -840,18 +814,7 @@
                                         </span>
 
                                         <!-- 推特标签和链接组合 -->
-                                        <div v-if="group.twitterLink" class="flex items-center gap-1">
-                                            <!-- 推特标签（使用原始颜色） -->
-                                            <span v-if="getTwitterLabel(group.twitterLink)" :style="{
-                                                      backgroundColor: getTwitterLabel(group.twitterLink).color,
-                                                      color: '#FFFFFF',
-                                                      padding: '2px 8px',
-                                                      borderRadius: '9999px',
-                                                      fontSize: '0.75rem',
-                                                      lineHeight: '1rem'
-                                                  }" class="inline-flex items-center">
-                                                {{ getTwitterLabel(group.twitterLink).label }}
-                                            </span>
+                                        <div v-if="group.twitterLink" class="flex items-center gap-1"> 
 
                                             <!-- X推特链接 -->
                                             <a v-if="isFullTwitterLink(group.twitterLink)" :href="group.twitterLink"

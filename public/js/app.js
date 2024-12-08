@@ -135,7 +135,6 @@ createApp({
             selectedGroupSymbol: '',
             showCopyMessage: false,
             copyMessageTimer: null,
-            twitterLabels: [],
             newLabel: {
                 twitterUrl: '',
                 label: '',
@@ -211,6 +210,12 @@ createApp({
             isCacheEnabled: true,
             lastCacheUpdate: null,
             websocket: null,
+            addressAliases: new Map(),
+            addressAliasesLastUpdate: 0,
+            addressAliasesUpdateInterval: 10000, // 10秒更新一次
+            devPollingInterval: 5000, // 5秒轮询一次
+            lastDevUpdate: null,
+            previousDevTokens: [], // 用于比较新旧数据
         }
     },
     methods: {
@@ -448,50 +453,6 @@ createApp({
             this.copyText(address);
         },
         
-        async fetchTwitterLabels() {
-            try {
-                const response = await axios.get(`/api/twitter-labels?page=${this.labelPage}`);
-                this.twitterLabels = response.data.labels;
-                this.labelTotal = response.data.total;
-                this.labelPages = response.data.pages;
-            } catch (error) {
-                console.error('获取推特标签失败:', error);
-            }
-        },
-        
-        async saveTwitterLabel() {
-            try {
-                if (!this.newLabel.twitterUrl || !this.newLabel.label) {
-                    alert('请填写完整标签信息');
-                    return;
-                }
-
-                await axios.post('/api/twitter-labels', this.newLabel);
-                await this.fetchTwitterLabels();
-                
-                // 重置表单
-                this.showLabelForm = false;
-                this.newLabel = {
-                    twitterUrl: '',
-                    label: '',
-                    color: '#3B82F6'
-                };
-            } catch (error) {
-                console.error('保存推特标签失败:', error);
-                alert('保存标签失败，请重试');
-            }
-        },
-        
-        async deleteTwitterLabel(id) {
-            if (confirm('确定要删除这个标签吗？')) {
-                try {
-                    await axios.delete(`/api/twitter-labels/${id}`);
-                    await this.fetchTwitterLabels();
-                } catch (error) {
-                    console.error('删除推特标签失败:', error);
-                }
-            }
-        },
         
         normalizeTwitterUrl(url) {
             if (!url) return '';
@@ -503,39 +464,13 @@ createApp({
                      .split('/')[0];  // 只保留户名部分
         },
         
-        getTwitterLabel(url) {
-            if (!url) return null;
-            const normalizedUrl = this.normalizeTwitterUrl(url);
-            const label = this.twitterLabels.find(label => 
-                normalizedUrl === this.normalizeTwitterUrl(label.twitterUrl)
-            );
-            return label ? {
-                ...label,
-                // 确保颜色值是有效的
-                color: label.color || '#6366f1' // 默认颜色，防没有设置
-            } : null;
-        },
-        
-        getTwitterLabelStyle(url) {
-            const label = this.getTwitterLabel(url);
-            if (!label) return null;
-            return {
-                backgroundColor: label.color,
-                color: '#FFFFFF',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                display: 'inline-block',
-                lineHeight: '16px',
-                whiteSpace: 'nowrap'
-            };
-        },
+
+
         
         processDuplicateGroups() {
             return this.duplicateGroups.map(group => ({
                 ...group,
                 twitterLink: group.tokens[0]?.metadata?.twitter || null,
-                label: this.getTwitterLabel(group.tokens[0]?.metadata?.twitter)
             }));
         },
         
@@ -643,134 +578,12 @@ createApp({
             return name.charAt(0).toUpperCase();
         },
         
-        exportTwitterLabels() {
-            try {
-                // 准备导出数据
-                const exportData = this.twitterLabels.map(label => ({
-                    twitterUrl: label.twitterUrl,
-                    label: label.label,
-                    color: label.color,
-                    timestamp: new Date(label.timestamp).toISOString()
-                }));
-
-                // 创建 Blob
-                const blob = new Blob(
-                    [JSON.stringify(exportData, null, 2)], 
-                    { type: 'application/json' }
-                );
-
-                // 创建下载链接
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                
-                // 设置文件名（使用当前时间戳）
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                link.download = `twitter-labels-${timestamp}.json`;
-                
-                // 触发下载
-                document.body.appendChild(link);
-                link.click();
-                
-                // 清理
-                document.body.removeChild(link);
-                window.URL.revokeObjectURL(url);
-            } catch (error) {
-                console.error('导出标签失败:', error);
-            }
-        },
         
-        // 导入标签
-        async importLabels(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            try {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        const labels = JSON.parse(e.target.result);
-                        let imported = 0;
-                        let skipped = 0;
-
-                        for (const label of labels) {
-                            try {
-                                await axios.post('/api/twitter-labels', label);
-                                imported++;
-                            } catch (error) {
-                                skipped++;
-                            }
-                        }
-
-                        this.importStatus = {
-                            show: true,
-                            message: `导入完成：成功 ${imported} 个跳过 ${skipped} 个重复或无效标签`,
-                            error: false
-                        };
-                        await this.fetchTwitterLabels();
-                    } catch (error) {
-                        this.importStatus = {
-                            show: true,
-                            message: `导入失败: ${error.message}`,
-                            error: true
-                        };
-                    }
-                };
-                reader.readAsText(file);
-            } catch (error) {
-                this.importStatus = {
-                    show: true,
-                    message: `导入失败: ${error.message}`,
-                    error: true
-                };
-            }
-        },
-
-        // 导出标签
-        async exportLabels() {
-            try {
-                const response = await axios.get('/api/twitter-labels');
-                const labels = response.data.labels;
-                const dataStr = JSON.stringify(labels, null, 2);
-                const blob = new Blob([dataStr], { type: 'application/json' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'twitter-labels.json';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-            } catch (error) {
-                console.error('导出标签失败:', error);
-            }
-        },
-
-        // 添加新标签
-        async addNewLabel() {
-            if (!this.newLabel.twitterUrl || !this.newLabel.label || !this.newLabel.color) {
-                return;
-            }
-
-            try {
-                await axios.post('/api/twitter-labels', this.newLabel);
-                this.newLabel = { twitterUrl: '', label: '', color: '#000000' };
-                await this.fetchTwitterLabels();
-            } catch (error) {
-                console.error('添加标签失败:', error);
-            }
-        },
-
-        // 添加切换显示/隐藏方法
-        toggleLabelList() {
-            this.showLabelList = !this.showLabelList;
-        },
 
         // 添加分页方法
         async changeLabelPage(page) {
             if (page >= 1 && page <= this.labelPages && page !== this.labelPage) {
                 this.labelPage = page;
-                await this.fetchTwitterLabels();
             }
         },
 
@@ -1016,11 +829,16 @@ createApp({
         // 获取地址别名
         async fetchAddressAliases() {
             try {
+                const now = Date.now();
+                if (now - this.addressAliasesLastUpdate < this.addressAliasesUpdateInterval) {
+                    return;
+                }
+
                 const response = await axios.get('/api/address-aliases');
-                this.addressAliases.clear();
-                response.data.forEach(item => {
-                    this.addressAliases.set(item.address, item.alias);
-                });
+                this.addressAliases = new Map(
+                    response.data.map(item => [item.address, item.alias])
+                );
+                this.addressAliasesLastUpdate = now;
             } catch (error) {
                 console.error('获取地址别名失败:', error);
             }
@@ -1092,34 +910,28 @@ createApp({
         // 获取 Dev 代币列表
         async fetchDevTokens() {
             try {
-                console.log('开始获取 Dev 代币');
                 const response = await axios.get('/api/dev-tokens');
-                console.log('获取到的 Dev 代币:', response.data);
+                const newTokens = response.data;
                 
-                // 保存当前数据长度
-                const currentCount = response.data.length;
-                
-                // 确保每个代币对象都包含必要的字段
-                this.devTokens = response.data.map(token => ({
-                    ...token,
-                    signer: token.signer,
-                    signerAlias: token.signerAlias,
-                    displayName: token.signerAlias || this.formatAddress(token.signer)
-                }));
-                
-                // 检查是否有新数据并播放提示音
-                if (this.previousDevCount > 0 && currentCount > this.previousDevCount) {
-                    this.playNotificationSound();
+                // 检查是否有新代币
+                if (this.previousDevTokens.length > 0) {
+                    const newDevTokens = newTokens.filter(token => 
+                        !this.previousDevTokens.some(pt => pt.mint === token.mint)
+                    );
+                    
+                    // 如果有新代币且声音开启，播放提示音
+                    if (newDevTokens.length > 0 && this.soundEnabled) {
+                        this.playNotification();
+                        // 可以添加桌面通知
+                        this.showNotification(`发现 ${newDevTokens.length} 个新的 Dev 代币`);
+                    }
                 }
                 
-                // 更新计数
-                this.previousDevCount = currentCount;
-                
-                // 计算总页数
-                this.devPages = Math.ceil(this.devTokens.length / this.devPageSize);
-                console.log('处理后的 devTokens:', this.devTokens);
+                this.devTokens = newTokens;
+                this.previousDevTokens = newTokens;
+                this.lastDevUpdate = new Date();
             } catch (error) {
-                console.error('获取 Dev 代币失败:', error);
+                console.error('获取Dev代币失败:', error);
             }
         },
 
@@ -1157,7 +969,7 @@ createApp({
                     alias: this.newDev.alias
                 });
                 
-                // 重新获取 Dev 列表
+                // 重新获取 Dev 列���
                 await this.fetchDevTokens();
                 await this.fetchAddressAliases();
                 
@@ -1314,6 +1126,34 @@ createApp({
                 console.error('加载令牌失败:', error);
             }
         },
+
+        getAddressAlias(address) {
+            return this.addressAliases.get(address) || address;
+        },
+
+        // 添加桌面通知
+        showNotification(message) {
+            if (Notification.permission === 'granted') {
+                new Notification('Dev 代币提醒', {
+                    body: message,
+                    icon: '/favicon.ico'
+                });
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        this.showNotification(message);
+                    }
+                });
+            }
+        },
+
+        playNotification() {
+            if (this.soundEnabled && this.notificationSound) {
+                this.notificationSound.play().catch(error => {
+                    console.error('播放提示音失败:', error);
+                });
+            }
+        }
     },
     mounted() {
         this.fetchTokens();
@@ -1329,7 +1169,6 @@ createApp({
             this.fetchDuplicateTokens();
         }, 2000);
         
-        this.fetchTwitterLabels();
         this.fetchData();
         this.startPolling();
         this.startDuplicatePolling();
@@ -1355,6 +1194,14 @@ createApp({
 
         this.loadAddressAliases();
         this.fetchDevList(); // 初始加载 Dev 列表
+
+        this.fetchDevTokens(); // 立即获取一次
+        this.startPolling(); // 开始轮询
+        
+        // 请求通知权限
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            Notification.requestPermission();
+        }
     },
     beforeUnmount() {
         if (this.refreshInterval) {

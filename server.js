@@ -391,10 +391,9 @@ app.post('/api/address-aliases', async (req, res) => {
     }
 });
 
-// 获取 Dev 代币列表
-app.get('/api/dev-tokens', async (req, res) => {
+// 修改 Dev 代币列表接口
+app.get('/api/dev-tokens', cacheMiddleware(2), async (req, res) => { // 只缓存2秒
     try {
-        // 获取所有地址别名
         const aliases = await AddressAlias.find().lean();
         if (aliases.length === 0) {
             return res.json([]);
@@ -402,21 +401,21 @@ app.get('/api/dev-tokens', async (req, res) => {
         
         const devAddresses = aliases.map(a => a.address);
         
+        // 只获取最近1小时内的代币
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        
         const tokens = await Token.find({
-            signer: { $in: devAddresses }
+            signer: { $in: devAddresses },
+            timestamp: { $gte: oneHourAgo }
         })
         .sort({ timestamp: -1 })
         .lean();
 
-        // 为每个代币添加开发者别名
-        const tokensWithAliases = tokens.map(token => {
-            const signerAlias = aliases.find(a => a.address === token.signer);
-            return {
-                ...token,
-                signerAlias: signerAlias?.alias || null,
-                timestamp: new Date(token.timestamp)
-            };
-        });
+        const tokensWithAliases = tokens.map(token => ({
+            ...token,
+            signerAlias: aliases.find(a => a.address === token.signer)?.alias || null,
+            timestamp: new Date(token.timestamp)
+        }));
 
         res.json(tokensWithAliases);
     } catch (error) {
