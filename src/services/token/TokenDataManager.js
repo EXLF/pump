@@ -1,6 +1,6 @@
-const { Token } = require('./models/db');
-const { broadcastUpdate } = require('./websocket');
-const BitqueryWebSocketClient = require('./BitqueryWebSocketClient');
+const { Token } = require('../../models/db');
+const { broadcastUpdate } = require('../../services/websocket/websocket');
+const BitqueryWebSocketClient = require('../../services/websocket/BitqueryWebSocketClient');
 const axios = require('axios');
 const Queue = require('bull');
 

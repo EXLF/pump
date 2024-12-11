@@ -1,7 +1,7 @@
 const TokenDataManager = require('./TokenDataManager');
-const { connectDB } = require('./models/db');
+const { connectDB } = require('../../models/db');
 const mongoose = require('mongoose');
-const cleanupTask = require('./tasks/cleanupTask');
+const cleanupTask = require('../../tasks/cleanupTask');
 
 async function main() {
     console.log(JSON.stringify({

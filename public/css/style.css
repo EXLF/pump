@@ -30,4 +30,461 @@
 
 .overflow-y-hidden {
     overflow-y: hidden;
+}
+
+.holders-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.holders-count .number {
+    color: #374151;
+    font-weight: 500;
+}
+
+.holders-count .update-icon {
+    color: #374151;
+    font-size: 14px;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.holders-count:hover .update-icon {
+    transform: rotate(180deg);
+}
+
+.holders-count.updating .update-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 表头样式 */
+table th {
+    background-color: #f5f5f5;
+    padding: 12px;
+    text-align: left;
+    font-weight: bold;
+    color: #333;
+    border-bottom: 2px solid #ddd;
+}
+
+/* 确保表格列宽合适 */
+table td {
+    padding: 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #eee;
+}
+
+/* 表格样式优化 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.address-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.copy-button {
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.copy-button:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+}
+
+/* 添加动画效果 */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.holders-count.updating {
+    animation: pulse 1s infinite;
 } 
+
+/* 表格容器 */
+.token-list-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+/* 表格基础样式 */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/* 表头样式 */
+thead {
+    background-color: #f9fafb;
+}
+
+th {
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* 表格单元格 */
+td {
+    padding: 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* 代币符号单元格 */
+.token-symbol {
+    display: flex;
+    align-items: center;
+}
+
+.token-symbol .flex-shrink-0 {
+    flex-shrink: 0;
+}
+
+.token-symbol .ml-4 {
+    margin-left: 1rem;
+}
+
+/* 地址单元格 */
+.address-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.address-cell > div:first-child {
+    color: #2563eb;
+}
+
+.address-cell > div:first-child:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+/* 确保图标和文字对齐 */
+.inline-flex.items-center {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* 优化图标大小 */
+.w-3\.5 {
+    width: 0.875rem;
+}
+
+.h-3\.5 {
+    height: 0.875rem;
+}
+
+/* 确保文字大小一致 */
+.text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+}
+
+/* 持币人数样式 */
+.holders-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.holders-count .number {
+    color: #374151;
+    font-weight: 500;
+}
+
+.holders-count .update-icon {
+    color: #374151;
+    font-size: 14px;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.holders-count:hover .update-icon {
+    transform: rotate(180deg);
+}
+
+.holders-count.updating .update-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 复制按钮样式 */
+.copy-button {
+    padding: 4px 8px;
+    font-size: 12px;
+    color: #6b7280;
+    background-color: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+    background-color: #e5e7eb;
+    border-color: #d1d5db;
+}
+
+/* 社交媒体链接样式 */
+.social-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #6b7280;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.social-link:hover {
+    background-color: #f3f4f6;
+}
+
+.social-link svg {
+    flex-shrink: 0;
+}
+
+.social-link span {
+    line-height: 1;
+}
+
+.social-link.text-green-500 {
+    color: #10b981;
+}
+
+.social-link.text-yellow-500 {
+    color: #f59e0b;
+}
+
+.social-link.text-red-500 {
+    color: #ef4444;
+}
+
+/* 动画效果 */
+.holders-count.updating {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* 响应式调整 */
+@media (max-width: 1024px) {
+    td, th {
+        padding: 12px 8px;
+    }
+    
+    .copy-button {
+        padding: 2px 6px;
+    }
+}
+
+/* 悬停效果 */
+tr:hover {
+    background-color: #f9fafb;
+}
+
+/* 图标样式 */
+.icon {
+    width: 16px;
+    height: 16px;
+}
+
+/* 时间显示容器 */
+.time-container {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.time-container .date {
+    font-weight: 500;
+    color: #374151;
+}
+
+.time-container .time {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* 可复制文本样式 */
+.cursor-pointer {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cursor-pointer:hover {
+    color: #2563eb;
+}
+
+/* 复制成功提示 */
+.copy-toast {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    background-color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    padding: 0;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.copy-toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.copy-toast-content {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    color: #374151;
+    font-size: 14px;
+}
+
+/* 图标按钮 */
+.icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border-radius: 4px;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+    background-color: #f3f4f6;
+    color: #2563eb;
+}
+
+/* 操作按钮样式 */
+.action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    background-color: transparent;
+}
+
+.action-button:hover {
+    background-color: #f3f4f6;
+}
+
+/* Solscan按钮 */
+.action-button {
+    background-color: #f3f4f6;
+    color: #6b7280;
+}
+
+.action-button:hover {
+    background-color: #e5e7eb;
+    color: #2563eb;
+}
+
+/* GMGN按钮 */
+.action-button img.rounded-full {
+    transition: transform 0.2s ease;
+}
+
+.action-button:hover img.rounded-full {
+    transform: scale(1.1);
+}
+
+/* 推特搜索按钮 */
+.action-button.twitter-search {
+    background-color: #e8f5fd;
+}
+
+.action-button.twitter-search:hover {
+    background-color: #bfdbfe;
+}
+
+/* 地址单元格布局 */
+.address-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.address-cell > div:first-child {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.address-cell .flex.items-center.space-x-1 {
+    flex-shrink: 0;
+    display: flex;
+    gap: 4px;
+}
+
+/* 动画效果 */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.copy-toast.show {
+    animation: fadeInDown 0.3s ease forwards;
+}

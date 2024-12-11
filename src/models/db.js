@@ -70,7 +70,9 @@ const tokenSchema = new mongoose.Schema({
         external_url: String
     },
     duplicateGroup: Number,
-    duplicateType: String
+    duplicateType: String,
+    holdersCount: { type: Number, default: 0 },
+    lastHoldersUpdate: { type: Date, default: null }
 }, {
     timestamps: true // 添加 createdAt 和 updatedAt
 });

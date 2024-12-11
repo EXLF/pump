@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { ApiKey } = require('../models/db');
+const { ApiKey } = require('../../models/db');
 
 // 获取所有 API Keys
 router.get('/', async (req, res) => {

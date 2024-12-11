@@ -1,15 +1,18 @@
 const express = require('express');
-const apiKeysRouter = require('./routes/apiKeys');
-const { connectDB, Token, ApiKey, AddressAlias } = require('./models/db');
+const apiKeysRouter = require('./src/api/routes/apiKeys');
+const { connectDB, Token, ApiKey, AddressAlias } = require('./src/models/db');
 const cors = require('cors');
 const NodeCache = require('node-cache');
 const cache = new NodeCache({ 
-    stdTTL: 5,
+    stdTTL: 3,
     checkperiod: 10,
     maxKeys: 1000,
     useClones: false // 禁用克隆以提高性能
-}); // 5秒缓存
-const { initializeWebSocket } = require('./websocket');
+}); // 3秒缓存
+const { initializeWebSocket } = require('./src/services/websocket/websocket');
+const { getHoldersCount } = require('./src/services/holders/holdersService');
+const { updateHoldersCount } = require('./src/tasks/updateHoldersTask');
+const cron = require('node-cron');
 
 // 初始化数据库连接
 connectDB();
@@ -47,20 +50,34 @@ app.use((req, res, next) => {
     next();
 });
 
-// 添加缓存中间件
+// 创建两级缓存
+const shortCache = new NodeCache({ 
+    stdTTL: 2,  // 2秒的短期缓存
+    checkperiod: 1,
+    maxKeys: 1000,
+    useClones: false
+});
+
+const longCache = new NodeCache({ 
+    stdTTL: 10,  // 10秒的长期缓存
+    checkperiod: 5,
+    maxKeys: 1000,
+    useClones: false
+});
+
+// 优化的缓存中间件
 const cacheMiddleware = (duration) => (req, res, next) => {
     const key = `__express__${req.originalUrl}`;
-    const cachedResponse = cache.get(key);
+    const cachedResponse = longCache.get(key);
 
     if (cachedResponse) {
-        res.json(cachedResponse);
-        return;
+        return res.json(cachedResponse);
     }
 
-    res.originalJson = res.json;
-    res.json = (body) => {
-        cache.set(key, body, duration);
-        res.originalJson(body);
+    const originalJson = res.json;
+    res.json = function(body) {
+        longCache.set(key, body, duration);
+        return originalJson.call(this, body);
     };
     next();
 };
@@ -91,34 +108,29 @@ function normalizeTwitterUrl(url) {
               .split('/')[0];  // 只保留用户名部分
 }
 
-// 获取代币列表
-app.get('/api/tokens', cacheMiddleware(30), async (req, res) => {
+// 获取代币列表 - 使用分层缓存
+app.get('/api/tokens', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const duplicatesOnly = req.query.duplicatesOnly === 'true';
         const groupNumber = req.query.groupNumber ? parseInt(req.query.groupNumber) : null;
         
-        // 修改缓存键，加入组号
-        const cacheKey = `tokens_page_${page}_${duplicatesOnly}_${groupNumber || 'all'}`;
+        // 构建缓存键
+        const cacheKey = `tokens_${page}_${duplicatesOnly}_${groupNumber || 'all'}`;
         
         // 检查缓存
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            return res.json(cachedData);
+        let result = cache.get(cacheKey);
+        if (result) {
+            return res.json(result);
         }
 
-        const limit = 9;
-        const skip = (page - 1) * limit;
-
-        // 构建查询条件
-        let query = {};
+        const query = {};
         if (groupNumber !== null) {
             query.duplicateGroup = groupNumber;
         } else if (duplicatesOnly) {
             query.duplicateGroup = { $ne: null };
         }
 
-        // 使用投影减少返回的字段
         const projection = {
             mint: 1,
             signer: 1,
@@ -129,35 +141,55 @@ app.get('/api/tokens', cacheMiddleware(30), async (req, res) => {
             duplicateType: 1,
             'metadata.uri': 1,
             'metadata.image': 1,
-            'metadata.twitter': 1
+            'metadata.twitter': 1,
+            holdersCount: 1,
+            lastHoldersUpdate: 1
         };
 
-        // 并行执行查询
         const [tokens, total] = await Promise.all([
             Token.find(query)
                 .select(projection)
                 .sort({ timestamp: -1 })
-                .skip(skip)
-                .limit(limit)
+                .skip((page - 1) * 9)
+                .limit(9)
                 .lean(),
             Token.countDocuments(query)
         ]);
 
-        // 调整时间为 UTC+8
+        // 更新超过5分钟未更新的持币人数据
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const updatePromises = tokens
+            .filter(token => !token.lastHoldersUpdate || token.lastHoldersUpdate < fiveMinutesAgo)
+            .map(async (token) => {
+                try {
+                    const holdersCount = await getHoldersCount(token.mint);
+                    await Token.findOneAndUpdate(
+                        { mint: token.mint },
+                        { 
+                            holdersCount,
+                            lastHoldersUpdate: new Date()
+                        }
+                    );
+                    token.holdersCount = holdersCount;
+                } catch (error) {
+                    console.error(`更新${token.mint}的持币人数据失败:`, error);
+                }
+            });
+
+        await Promise.all(updatePromises);
+
         tokens.forEach(token => {
-            token.timestamp = new Date(new Date(token.timestamp).getTime());
+            token.timestamp = new Date(token.timestamp);
         });
 
-        const result = {
+        result = {
             tokens,
             total,
             page,
-            pages: Math.ceil(total / limit)
+            pages: Math.ceil(total / 9)
         };
-        
-        // 设置缓存
+
         cache.set(cacheKey, result);
-        
         res.json(result);
     } catch (error) {
         console.error('查询失败:', error);
@@ -311,7 +343,7 @@ app.get('/api/tokens/search', async (req, res) => {
         // 构建查询条件，忽略大小写
         const searchQuery = {
             $or: [
-                { symbol: new RegExp(`^${query}$`, 'i') },  // 精确匹配符号，忽略大小写
+                { symbol: new RegExp(`^${query}$`, 'i') },  // 精确匹配符号，忽略小写
                 { mint: new RegExp(`^${query}$`, 'i') }     // 精确匹配地址，忽略大小写
             ]
         };
@@ -343,7 +375,7 @@ app.get('/api/tokens/search', async (req, res) => {
     }
 });
 
-// 每8小时更新一次duplicateGroup字段最多的值为null
+// 每8小时更新一次duplicateGroup字段最多的为null
 setInterval(async () => {
     try {
         const result = await Token.aggregate([
@@ -423,6 +455,36 @@ app.get('/api/dev-tokens', cacheMiddleware(10), async (req, res) => { // 只缓�
         console.error('获取 Dev 代币失败:', error);
         res.status(500).json({ error: error.message });
     }
+});
+
+// 添加更新持币人数的端点
+app.post('/api/update-holders-count', async (req, res) => {
+    try {
+        const { mint } = req.body;
+        if (!mint) {
+            return res.status(400).json({ error: '缺少mint地址' });
+        }
+
+        const holdersCount = await getHoldersCount(mint);
+        await Token.findOneAndUpdate(
+            { mint },
+            { 
+                holdersCount,
+                lastHoldersUpdate: new Date()
+            }
+        );
+
+        res.json({ holdersCount });
+    } catch (error) {
+        console.error('更新持币人数失败:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 添加定时任务，每30分钟执行一次更新
+cron.schedule('*/30 * * * *', async () => {
+    console.log('开始执行持币人数据更新任务');
+    await updateHoldersCount();
 });
 
 const server = app.listen(port, () => {

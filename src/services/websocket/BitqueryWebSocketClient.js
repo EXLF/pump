@@ -2,7 +2,8 @@ require('dotenv').config();
 
 const { EventEmitter } = require('events');
 const { WebSocket } = require("ws");
-const { ApiKey } = require('./models/db');
+const { ApiKey } = require('../../models/db');
+const { QueryManager } = require('../../graphql/queries');
 
 class BitqueryWebSocketClient extends EventEmitter {
     constructor(tokenManager) {
@@ -16,8 +17,10 @@ class BitqueryWebSocketClient extends EventEmitter {
         this.reconnectDelay = parseInt(process.env.RECONNECT_DELAY, 10) || 2000;
         this.messageBuffer = [];
         this.batchSize = 10;
-        this.batchInterval = 1000;
+        this.batchInterval = 800;
         this.processingInterval = null;
+        this.queryManager = new QueryManager();
+        this.activeSubscriptions = new Map();
     }
 
     async loadApiKeys() {
@@ -70,7 +73,7 @@ class BitqueryWebSocketClient extends EventEmitter {
                 switch (response.type) {
                     case "connection_ack":
                         console.log("服务器确认连接");
-                        this.sendSubscription();
+                        this.sendSubscription('TOKEN_CREATION');
                         break;
 
                     case "data":
@@ -155,53 +158,27 @@ class BitqueryWebSocketClient extends EventEmitter {
         await this.connect();
     }
 
-    sendSubscription() {
-        const subscriptionMessage = JSON.stringify({
-            type: "start",
-            id: "1",
-            payload: {
-                query: `
-                subscription {
-                    Solana {
-                        Instructions(
-                            where: {Instruction: {Program: {Method: {is: "create"}, Name: {is: "pump"}}}}
-                        ) {
-                            Block {
-                                Time
-                            }
-                            Instruction {
-                                Accounts {
-                                    Token {
-                                        Mint
-                                        Owner
-                                    }
-                                }
-                                Program {
-                                    Arguments {
-                                        Name
-                                        Type
-                                        Value {
-                                            ... on Solana_ABI_String_Value_Arg {
-                                                string
-                                            }
-                                        }
-                                    }
-                                    Method
-                                    Name
-                                }
-                            }
-                            Transaction {
-                                Signer
-                            }
-                        }
-                    }
+    sendSubscription(queryName) {
+        try {
+            const query = this.queryManager.getQuery(queryName);
+            const subscriptionMessage = JSON.stringify({
+                type: "start",
+                id: queryName,
+                payload: {
+                    query: query
                 }
-                `
-            }
-        });
+            });
 
-        this.ws.send(subscriptionMessage);
-        console.log("订阅消息已发送");
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(subscriptionMessage);
+                this.activeSubscriptions.set(queryName, true);
+                console.log(`已发送订阅请求: ${queryName}`);
+            } else {
+                console.error('WebSocket未连接或未就绪，无法发送订阅');
+            }
+        } catch (error) {
+            console.error(`发送订阅失败: ${error.message}`);
+        }
     }
 
     startMessageProcessing() {

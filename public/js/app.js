@@ -33,7 +33,11 @@ createApp({
             isUserScrolling: false,  // 添加用户滚动状态标记
             lastUpdateTime: 0,
             imageCache: new Map(), // 用于缓存头像
-            updateInterval: 10000,  // 更新间隔改为10秒
+            updateInterval: 3000,  // 更新为3秒
+            minUpdateInterval: 2000,  // 最小更新间隔
+            maxUpdateInterval: 5000,  // 最大更新间隔
+            lastDataChange: null,  // 上次数据变化时间
+            consecutiveNoChanges: 0,  // 连续无变化次数
             importStatus: {
                 show: false,
                 message: '',
@@ -99,7 +103,7 @@ createApp({
             websocket: null,
             addressAliases: new Map(),
             addressAliasesLastUpdate: 0,
-            addressAliasesUpdateInterval: 10000, // 10秒更新一次
+            addressAliasesUpdateInterval: 6000, // 6秒更新一次
             devPollingInterval: 5000, // 5秒轮询一次
             lastDevUpdate: null,
             previousDevTokens: [], // 用于比较新旧数据
@@ -217,7 +221,7 @@ createApp({
                 // 计算总页数
                 this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
                 
-                // 保持在当前页，除非是初始化或页码无效
+                // 保持在当前页，除非是初始化或效
                 if (!this.duplicateCurrentPage || this.duplicateCurrentPage > this.duplicateTotalPages) {
                     this.duplicateCurrentPage = 1;  // 确保新数据显示在第一页
                 }
@@ -233,37 +237,39 @@ createApp({
             this.error = null;
             
             try {
-                const cacheKey = `tokens_${this.currentPage}_${this.activeTab}`;
-                const cachedData = sessionStorage.getItem(cacheKey);
-                
-                if (cachedData && !forceRefresh) {
-                    const parsed = JSON.parse(cachedData);
-                    if (Date.now() - parsed.timestamp < 5000) { // 5秒缓存
-                        this.updateTokensData(parsed.data);
-                        return;
-                    }
-                }
-
-                let params = { 
-                    page: this.currentPage
+                const params = { 
+                    page: this.currentPage,
+                    _t: Date.now()
                 };
                 
-                // 优先处理特定组的查询
                 if (this.selectedDuplicateGroup) {
                     params.groupNumber = this.selectedDuplicateGroup;
                 } else if (this.activeTab === 'duplicates') {
                     params.duplicatesOnly = true;
                 }
                 
-                const response = await axios.get('/api/tokens', { params });
+                const response = await axios.get('/api/tokens', { 
+                    params,
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache',
+                        'Expires': '0'
+                    }
+                });
                 
-                // 只有在当前状态匹配时才更新数据
                 if ((!this.selectedDuplicateGroup && !params.groupNumber) || 
                     (this.selectedDuplicateGroup === params.groupNumber)) {
-                    this.tokens = response.data.tokens;
-                    this.total = response.data.total;
-                    this.pages = response.data.pages;
-                    this.lastUpdate = new Date().toLocaleString();
+                    // 检查数据是否有变化
+                    const hasChanged = this.hasDataChanged(this.tokens, response.data.tokens);
+                    if (hasChanged) {
+                        this.updateTokensData(response.data);
+                        this.lastDataChange = Date.now();
+                        this.consecutiveNoChanges = 0;
+                        this.adjustUpdateInterval(true);
+                    } else {
+                        this.consecutiveNoChanges++;
+                        this.adjustUpdateInterval(false);
+                    }
                 }
             } catch (error) {
                 this.error = '获取数据失败';
@@ -271,12 +277,6 @@ createApp({
             } finally {
                 this.loading = false;
             }
-
-            // 缓存新数据
-            sessionStorage.setItem(cacheKey, JSON.stringify({
-                data: response.data,
-                timestamp: Date.now()
-            }));
         },
 
         async handlePageChange(page) {
@@ -407,13 +407,13 @@ createApp({
         },
         
         hasDataChanged(oldData, newData) {
+            if (!oldData || !newData) return true;
             if (oldData.length !== newData.length) return true;
             
             return newData.some((newItem, index) => {
                 const oldItem = oldData[index];
-                return newItem.id !== oldItem.id || 
-                       newItem.name !== oldItem.name ||
-                       newItem.metadata?.twitter !== oldItem.metadata?.twitter;
+                return newItem.mint !== oldItem.mint || 
+                       newItem.timestamp !== oldItem.timestamp;
             });
         },
         
@@ -607,13 +607,13 @@ createApp({
         startDuplicatePolling() {
             this.fetchDuplicateTokens(); // 立即获取一次数据
             this.duplicatePolling = setInterval(() => {
-                if (!this.isDuplicateSearchActive) {  // 只在非搜索状态下更新
+                if (!this.isDuplicateSearchActive) {  // 只在非搜索态下更新
                     this.fetchDuplicateTokens();
                 }
             }, this.updateInterval);
         },
 
-        // 处理分页切换
+        // 处理分页换
         handleDuplicatePageChange(page) {
             if (this.isDuplicateSearchActive) {
                 if (page < 1 || page > this.duplicateSearchTotalPages) return;
@@ -628,7 +628,7 @@ createApp({
             const start = (this.duplicateCurrentPage - 1) * this.duplicatePageSize;
             const end = start + this.duplicatePageSize;
             
-            // 接使用已排序数据
+            // 接使已排序数据
             return this.duplicateTokens.slice(start, end);
         },
 
@@ -697,13 +697,19 @@ createApp({
             
             socket.addEventListener('open', () => {
                 console.log('WebSocket 连接已建立');
+                // 连接成功后立即获取一次数据
+                this.fetchTokens(true);
             });
 
             socket.addEventListener('message', (event) => {
-                const { type, data } = JSON.parse(event.data);
-                if (type === 'tokensUpdate') {
-                    this.tokens = data;
-                    this.lastUpdate = new Date().toLocaleString();
+                try {
+                    const { type, data } = JSON.parse(event.data);
+                    if (type === 'tokensUpdate' && !this.isSearchActive) {
+                        // 直接更新数据，不经过 fetchTokens
+                        this.updateTokensData(data);
+                    }
+                } catch (error) {
+                    console.error('处理WebSocket消息失败:', error);
                 }
             });
 
@@ -711,6 +717,28 @@ createApp({
                 console.log('WebSocket 连接已关闭，尝试重新连接...');
                 setTimeout(() => this.connectWebSocket(), 5000);
             });
+
+            socket.addEventListener('error', (error) => {
+                console.error('WebSocket 错误:', error);
+            });
+        },
+
+        // 统一的数据更新方法
+        updateTokensData(data) {
+            if (!data) return;
+            
+            // 更新代币数据
+            if (data.tokens) {
+                this.tokens = data.tokens;
+                this.total = data.total;
+                this.pages = data.pages;
+            } else if (Array.isArray(data)) {
+                this.tokens = data;
+            }
+            
+            // 更新时间戳
+            this.lastUpdate = new Date().toLocaleString();
+            this.lastUpdateTime = Date.now();
         },
 
         formatShortAddress(address) {
@@ -736,14 +764,14 @@ createApp({
             }
         },
 
-        // 修改显示编辑别名的方法
+        // 修改显示编辑别名的方
         showEditAlias(address) {
             console.log('尝试编辑地址:', address); // 添加日志
             console.log('当前别名Map:', this.addressAliases); // 添加日志
             
             // 如果有别名，则不允许编辑
             if (this.addressAliases.has(address)) {
-                console.log('该地址已有别名，不允许编辑'); // 添加日志
+                console.log('该地址已有别名，不允许编辑'); // 添加日
                 return;
             }
             
@@ -776,7 +804,7 @@ createApp({
                 // 更新本地 Map
                 this.addressAliases.set(this.currentEditAddress, this.aliasInput);
                 
-                // 重新获取数据以确保同步
+                // 重获取数据以确保同步
                 await this.fetchAddressAliases();
                 await this.fetchDevTokens();
                 
@@ -811,7 +839,7 @@ createApp({
                         !this.previousDevTokens.some(pt => pt.mint === token.mint)
                     );
                     
-                    // 如果有新代币且声音开启，播放提示音
+                    // 如果有新代币且声音开启播放提示音
                     if (newDevTokens.length > 0 && this.soundEnabled) {
                         this.playNotification();
                         // 可以添加桌面通知
@@ -999,7 +1027,7 @@ createApp({
                     return;
                 }
 
-                // 2. 如果缓存未命中，从服务器加载
+                // 2. 如果缓存未命中从服务器加载
                 console.log('从服务器获取数据');
                 const response = await axios.get(`/api/tokens`, {
                     params: {
@@ -1045,52 +1073,183 @@ createApp({
                     console.error('播放提示音失败:', error);
                 });
             }
-        }
+        },
+
+        // 动态调整更新间隔
+        adjustUpdateInterval(hasChanged) {
+            if (hasChanged) {
+                // 如果数据有变化，减少更新间隔
+                this.updateInterval = Math.max(
+                    this.minUpdateInterval,
+                    this.updateInterval - 500
+                );
+            } else {
+                // 如果连续多次无变化，逐��增加更新间隔
+                if (this.consecutiveNoChanges >= 3) {
+                    this.updateInterval = Math.min(
+                        this.maxUpdateInterval,
+                        this.updateInterval + 500
+                    );
+                }
+            }
+            
+            // 重新设置轮询间隔
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+            }
+            this.refreshInterval = setInterval(() => {
+                if (!this.isSearchActive) {
+                    this.fetchTokens();
+                    this.fetchDuplicateTokens();
+                }
+            }, this.updateInterval);
+        },
+
+        // 添加更新持币人数的方法
+        async updateHoldersCount(mint) {
+            try {
+                const cell = document.querySelector(`tr[data-mint="${mint}"] .holders-count`);
+                if (cell) {
+                    cell.innerHTML = '<span class="loading">更新中...</span>';
+                }
+
+                const response = await fetch('/api/update-holders-count', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ mint })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('更新失败');
+                }
+                
+                const data = await response.json();
+                // 更新本地数据
+                const tokenIndex = this.tokens.findIndex(t => t.mint === mint);
+                if (tokenIndex !== -1) {
+                    this.tokens[tokenIndex].holdersCount = data.holdersCount;
+                    this.tokens[tokenIndex].lastHoldersUpdate = new Date();
+                }
+                
+                if (cell) {
+                    cell.innerHTML = `${data.holdersCount}<span class="update-icon">🔄</span>`;
+                }
+            } catch (error) {
+                console.error('更新持币人数失败:', error);
+                if (cell) {
+                    cell.innerHTML = '更新失败 🔄';
+                }
+            }
+        },
+
+        // 修改 formatTokenRow 方法
+        formatTokenRow(token) {
+            return `
+                <tr data-mint="${token.mint}">
+                    <td>${token.name || '未知'}</td>
+                    <td>${token.symbol || '未知'}</td>
+                    <td class="address-cell">
+                        <a href="https://solscan.io/token/${token.mint}" target="_blank" class="address-link">
+                            ${this.formatAddress(token.mint)}
+                        </a>
+                        <button class="copy-button" onclick="copyToClipboard('${token.mint}')">复制</button>
+                    </td>
+                    <td class="holders-count" onclick="app.updateHoldersCount('${token.mint}')" title="点击更新">
+                        ${token.holdersCount || '0'}
+                        <span class="update-icon">🔄</span>
+                    </td>
+                    <td class="address-cell">
+                        <a href="https://solscan.io/account/${token.signer}" target="_blank" class="address-link">
+                            ${this.formatAddress(token.signer)}
+                        </a>
+                        <button class="copy-button" onclick="copyToClipboard('${token.signer}')">复制</button>
+                    </td>
+                    <td>${this.formatTime(token.timestamp)}</td>
+                    <td>
+                        ${token.metadata?.twitter ? `
+                            <div class="social-links">
+                                <a href="${token.metadata.twitter}" target="_blank" class="${this.checkTwitterLink(token.metadata.twitter)}">
+                                    Twitter
+                                </a>
+                            </div>
+                        ` : ''}
+                    </td>
+                </tr>
+            `;
+        },
+
+        // 格式化日期
+        formatDate(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        },
+
+        // 格式化时间
+        formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        },
+
+        // 复制文本并显示提示
+        async copyText(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                // 添加复制反馈动画
+                const element = event.currentTarget;
+                element.classList.add('copy-feedback');
+                setTimeout(() => {
+                    element.classList.remove('copy-feedback');
+                }, 300);
+
+                // 显示提示
+                this.showCopyMessage = true;
+                if (this.copyMessageTimer) {
+                    clearTimeout(this.copyMessageTimer);
+                }
+                this.copyMessageTimer = setTimeout(() => {
+                    this.showCopyMessage = false;
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+            }
+        },
     },
     mounted() {
-        this.fetchTokens();
+        // 初始化数据
+        this.fetchTokens(true);
         this.fetchDuplicateTokens();
-        
-        this.refreshInterval = setInterval(() => {
-            // 根据当前状态决定刷新方式
-            if (this.selectedDuplicateGroup) {
-                this.fetchDuplicateGroupTokens();
-            } else {
-                this.fetchTokens();
-            }
-            this.fetchDuplicateTokens();
-        }, 2000);
-        
-        this.fetchData();
-        this.startPolling();
-        this.startDuplicatePolling();
-        this.startOnlineUsersPolling();
-        window.addEventListener('scroll', this.handleScroll);
-        // 恢复上次的滚动位置
-        const savedPosition = sessionStorage.getItem('scrollPosition');
-        if (savedPosition) {
-            window.scrollTo(0, parseInt(savedPosition));
-        }
-
-        this.connectWebSocket();
         this.fetchAddressAliases();
         this.fetchDevTokens();
-        
-        // 立即获取一次
-        this.fetchDevTokens();
-        
-        // 设置定时获取
-        setInterval(() => {
-            this.fetchDevTokens();
-        }, 30000);
-
         this.loadAddressAliases();
-        this.fetchDevList(); // 初始加载 Dev 列表
-
-        this.fetchDevTokens(); // 立即获取一次
-        this.startPolling(); // 开始轮询
+        this.fetchDevList();
         
-        // 请求通知权限
+        // 初始化更新间隔
+        this.refreshInterval = setInterval(() => {
+            if (!this.isSearchActive) {
+                this.fetchTokens();
+                this.fetchDuplicateTokens();
+            }
+        }, this.updateInterval);
+        
+        // WebSocket连接
+        this.connectWebSocket();
+        
+        // 其他初始化
+        window.addEventListener('scroll', this.handleScroll);
         if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
             Notification.requestPermission();
         }
