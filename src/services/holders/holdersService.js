@@ -1,10 +1,16 @@
 const axios = require('axios');
+const { ApiKey } = require('../../models/db');
 
 const BITQUERY_API_URL = 'https://streaming.bitquery.io/eap';
-const BITQUERY_BEARER_TOKEN = 'ory_at_6YJ_vOT2rgc5vW4LVEhOxwT-IXmN1R7L67BpTMscdFc.DmkFwCFhqC8XlhnA15N9ouqfmMe1NTfYZJEFWFZuDU0';
 
 async function getHoldersCount(mintAddress) {
     try {
+        // 从数据库获取活跃的 API key
+        const apiKey = await ApiKey.findOne({ isActive: true }).select('key');
+        if (!apiKey) {
+            throw new Error('No active API key found');
+        }
+
         const query = `
             query MyQuery {
                 Solana {
@@ -14,7 +20,9 @@ async function getHoldersCount(mintAddress) {
                     ) {
                         BalanceUpdate {
                             Currency {
+                                Name
                                 MintAddress
+                                Symbol
                             }
                             Account {
                                 Address
@@ -28,11 +36,11 @@ async function getHoldersCount(mintAddress) {
 
         const response = await axios.post(BITQUERY_API_URL, {
             query,
-            variables: {}
+            variables: "{}"
         }, {
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${BITQUERY_BEARER_TOKEN}`
+                'Authorization': `Bearer ${apiKey.key}`  // 使用 Bearer Token 认证
             }
         });
 
@@ -52,7 +60,7 @@ async function getHoldersCount(mintAddress) {
         return Math.max(holdersCount, uniqueAddresses);
     } catch (error) {
         console.error('获取持币人数据失败:', error);
-        return 0;
+        throw error; // 向上抛出错误，以便调用者知道具体失败原因
     }
 }
 
