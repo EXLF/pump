@@ -14,16 +14,25 @@ function initializeWebSocket(server) {
 
 function broadcastUpdate(data) {
     if (wss) {
-        const tokensWithSigner = data.data.map(token => ({
+        const tokensWithMetadata = data.data.map(token => ({
             ...token,
-            signer: token.signer
+            signer: token.signer,
+            metadata: {
+                ...token.metadata,
+                twitter: token.metadata?.twitter || null,
+                telegram: token.metadata?.telegram || null,
+                website: token.metadata?.website || null,
+                discord: token.metadata?.discord || null,
+                medium: token.metadata?.medium || null,
+                github: token.metadata?.github || null
+            }
         }));
 
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({
                     ...data,
-                    data: tokensWithSigner
+                    data: tokensWithMetadata
                 }));
             }
         });

@@ -127,7 +127,10 @@ class TokenDataManager {
                         createdOn: metadata.createdOn,
                         twitter: metadata.twitter,
                         website: metadata.website,
-                        telegram: metadata.telegram
+                        telegram: metadata.telegram,
+                        discord: metadata.discord,
+                        medium: metadata.medium,
+                        github: metadata.github
                     };
 
                     // 检查重复

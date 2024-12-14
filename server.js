@@ -10,26 +10,82 @@ const cache = new NodeCache({
     useClones: false // 禁用克隆以提高性能
 }); // 3秒缓存
 const { initializeWebSocket } = require('./src/services/websocket/websocket');
-const { getHoldersCount } = require('./src/services/holders/holdersService');
-const { updateHoldersCount } = require('./src/tasks/updateHoldersTask');
-const cron = require('node-cron');
+const WebSocket = require('ws');
 
 // 初始化数据库连接
 connectDB();
 
-// 使用 Map 存储用户IP和最后活跃时间
+// 使用 Map 存储用户连接信息
 const activeUsers = new Map();
+const wsConnections = new Map();
 const TIMEOUT = 5 * 60 * 1000; // 5分钟超时
-const BASE_ONLINE_USERS = 0; // 基础在线人数
+const HEARTBEAT_INTERVAL = 30 * 1000; // 30秒心跳间隔
+const HEARTBEAT_TIMEOUT = 35 * 1000; // 35秒心跳超时
+
+// WebSocket 心跳检测
+function setupHeartbeat(ws, clientId) {
+    ws.isAlive = true;
+    ws.on('pong', () => {
+        ws.isAlive = true;
+    });
+
+    // 发送心跳
+    const heartbeat = setInterval(() => {
+        if (!ws.isAlive) {
+            clearInterval(heartbeat);
+            wsConnections.delete(clientId);
+            updateOnlineCount();
+            return ws.terminate();
+        }
+        ws.isAlive = false;
+        ws.ping();
+    }, HEARTBEAT_INTERVAL);
+
+    // 连接关闭时清理
+    ws.on('close', () => {
+        clearInterval(heartbeat);
+        wsConnections.delete(clientId);
+        updateOnlineCount();
+    });
+}
+
+// 更新在线人数
+function updateOnlineCount() {
+    const onlineCount = wsConnections.size;
+    // 广播在线人数给所有连接
+    wsConnections.forEach((ws) => {
+        if (ws.readyState === 1) { // 1 = OPEN
+            ws.send(JSON.stringify({
+                type: 'onlineUsers',
+                data: { onlineUsers: onlineCount }
+            }));
+        }
+    });
+}
+
+// IP 过滤和用户统计
+function getClientId(req) {
+    const ip = req.headers['x-forwarded-for'] || 
+               req.connection.remoteAddress || 
+               req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return `${ip}-${userAgent}`;
+}
 
 // 定期清理过期用户
 setInterval(() => {
     const now = Date.now();
-    for (const [ip, lastActive] of activeUsers) {
+    for (const [clientId, lastActive] of activeUsers) {
         if (now - lastActive > TIMEOUT) {
-            activeUsers.delete(ip);
+            activeUsers.delete(clientId);
+            const ws = wsConnections.get(clientId);
+            if (ws) {
+                ws.terminate();
+                wsConnections.delete(clientId);
+            }
         }
     }
+    updateOnlineCount();
 }, 10 * 1000); // 每10秒检查一次
 
 const app = express();
@@ -45,8 +101,8 @@ app.use('/admin', express.static('public/admin'));
 
 // 中间件
 app.use((req, res, next) => {
-    const clientIP = req.ip || req.connection.remoteAddress;
-    activeUsers.set(clientIP, Date.now());
+    const clientId = getClientId(req);
+    activeUsers.set(clientId, Date.now());
     next();
 });
 
@@ -84,16 +140,25 @@ const cacheMiddleware = (duration) => (req, res, next) => {
 
 // API接口
 app.get('/api/online-users', (req, res) => {
-    // 清理过期用户
     const now = Date.now();
-    for (const [ip, lastActive] of activeUsers) {
-        if (now - lastActive > TIMEOUT) {
-            activeUsers.delete(ip);
+    let activeCount = 0;
+    
+    // 清理并统计活跃用户
+    for (const [clientId, lastActive] of activeUsers) {
+        if (now - lastActive <= TIMEOUT) {
+            activeCount++;
+        } else {
+            activeUsers.delete(clientId);
+            const ws = wsConnections.get(clientId);
+            if (ws) {
+                ws.terminate();
+                wsConnections.delete(clientId);
+            }
         }
     }
     
     res.json({ 
-        onlineUsers: BASE_ONLINE_USERS + activeUsers.size, // 加上基础在线人数
+        onlineUsers: Math.max(wsConnections.size, activeCount),
         lastUpdate: new Date().toISOString()
     });
 });
@@ -142,8 +207,11 @@ app.get('/api/tokens', async (req, res) => {
             'metadata.uri': 1,
             'metadata.image': 1,
             'metadata.twitter': 1,
-            holdersCount: 1,
-            lastHoldersUpdate: 1
+            'metadata.website': 1,
+            'metadata.telegram': 1,
+            'metadata.discord': 1,
+            'metadata.medium': 1,
+            'metadata.github': 1
         };
 
         const [tokens, total] = await Promise.all([
@@ -156,28 +224,6 @@ app.get('/api/tokens', async (req, res) => {
             Token.countDocuments(query)
         ]);
 
-        // 更新超过5分钟未更新的持币人数据
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const updatePromises = tokens
-            .filter(token => !token.lastHoldersUpdate || token.lastHoldersUpdate < fiveMinutesAgo)
-            .map(async (token) => {
-                try {
-                    const holdersCount = await getHoldersCount(token.mint);
-                    await Token.findOneAndUpdate(
-                        { mint: token.mint },
-                        { 
-                            holdersCount,
-                            lastHoldersUpdate: new Date()
-                        }
-                    );
-                    token.holdersCount = holdersCount;
-                } catch (error) {
-                    console.error(`更新${token.mint}的持币人数据失败:`, error);
-                }
-            });
-
-        await Promise.all(updatePromises);
-
         tokens.forEach(token => {
             token.timestamp = new Date(token.timestamp);
         });
@@ -185,15 +231,17 @@ app.get('/api/tokens', async (req, res) => {
         result = {
             tokens,
             total,
-            page,
-            pages: Math.ceil(total / 9)
+            pages: Math.ceil(total / 9),
+            currentPage: page
         };
 
+        // 设置缓存
         cache.set(cacheKey, result);
+
         res.json(result);
     } catch (error) {
-        console.error('查询失败:', error);
-        res.status(500).json({ error: error.message });
+        console.error('获取代币列表失败:', error);
+        res.status(500).json({ error: '获取代币列表失败' });
     }
 });
 
@@ -240,7 +288,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
 
             if (tokens.length < 2) return null; // 跳过只有一个代币的组
 
-            // 获取最新和最早的时间戳，并统一加4小时调整时区
+            // 获取最新和最早的时间戳，并统一加4���时调整时区
             const latestTime = new Date(tokens[0].timestamp).getTime();
             const previousTime = tokens[1]?.timestamp 
                 ? new Date(tokens[1].timestamp).getTime() 
@@ -402,7 +450,6 @@ setInterval(async () => {
 app.get('/api/address-aliases', async (req, res) => {
     try {
         const aliases = await AddressAlias.find().lean();
-        console.log('查询到的地址别名:', aliases);
         res.json(aliases);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -457,39 +504,28 @@ app.get('/api/dev-tokens', cacheMiddleware(10), async (req, res) => { // 只缓�
     }
 });
 
-// 添加更新持币人数的端点
-app.post('/api/update-holders-count', async (req, res) => {
-    try {
-        const { mint } = req.body;
-        if (!mint) {
-            return res.status(400).json({ error: '缺少mint地址' });
-        }
-
-        const holdersCount = await getHoldersCount(mint);
-        await Token.findOneAndUpdate(
-            { mint },
-            { 
-                holdersCount,
-                lastHoldersUpdate: new Date()
-            }
-        );
-
-        res.json({ holdersCount });
-    } catch (error) {
-        console.error('更新持币人数失败:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 添加定时任务，每30分钟执行一次更新
-cron.schedule('*/30 * * * *', async () => {
-    console.log('开始执行持币人数据更新任务');
-    await updateHoldersCount();
-});
-
 const server = app.listen(port, () => {
     console.log(`服务器运行在 http://localhost:${port}`);
 });
 
 // 初始化 WebSocket
-initializeWebSocket(server); 
+const wss = new WebSocket.Server({ server });
+
+wss.on('connection', (ws, req) => {
+    const clientId = getClientId(req);
+    wsConnections.set(clientId, ws);
+    setupHeartbeat(ws, clientId);
+    updateOnlineCount();
+
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            if (data.type === 'heartbeat') {
+                ws.isAlive = true;
+                activeUsers.set(clientId, Date.now());
+            }
+        } catch (error) {
+            console.error('WebSocket 消息处理错误:', error);
+        }
+    });
+}); 

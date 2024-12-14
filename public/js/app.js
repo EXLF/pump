@@ -107,6 +107,7 @@ createApp({
             devPollingInterval: 5000, // 5秒轮询一次
             lastDevUpdate: null,
             previousDevTokens: [], // 用于比较新旧数据
+            heartbeatInterval: null, // 用于心跳检测
         }
     },
     methods: {
@@ -699,14 +700,18 @@ createApp({
                 console.log('WebSocket 连接已建立');
                 // 连接成功后立即获取一次数据
                 this.fetchTokens(true);
+                
+                // 启动心跳
+                this.startHeartbeat(socket);
             });
 
             socket.addEventListener('message', (event) => {
                 try {
                     const { type, data } = JSON.parse(event.data);
                     if (type === 'tokensUpdate' && !this.isSearchActive) {
-                        // 直接更新数据，不经过 fetchTokens
                         this.updateTokensData(data);
+                    } else if (type === 'onlineUsers') {
+                        this.onlineUsers = data.onlineUsers;
                     }
                 } catch (error) {
                     console.error('处理WebSocket消息失败:', error);
@@ -715,12 +720,34 @@ createApp({
 
             socket.addEventListener('close', () => {
                 console.log('WebSocket 连接已关闭，尝试重新连接...');
+                clearInterval(this.heartbeatInterval);
                 setTimeout(() => this.connectWebSocket(), 5000);
             });
 
             socket.addEventListener('error', (error) => {
                 console.error('WebSocket 错误:', error);
+                clearInterval(this.heartbeatInterval);
             });
+
+            this.websocket = socket;
+        },
+
+        // 添加心跳检测
+        startHeartbeat(socket) {
+            // 清除可能存在的旧心跳
+            if (this.heartbeatInterval) {
+                clearInterval(this.heartbeatInterval);
+            }
+
+            // 启动新的心跳
+            this.heartbeatInterval = setInterval(() => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        type: 'heartbeat',
+                        timestamp: Date.now()
+                    }));
+                }
+            }, 30000); // 每30秒发送一次心跳
         },
 
         // 统一的数据更新方法
@@ -817,7 +844,7 @@ createApp({
             }
         },
 
-        // 获取显示文本（别名或地址）
+        // 获取显示文本（别名或地址���
         getDisplayAddress(address) {
             return this.addressAliases.get(address) || this.formatShortAddress(address);
         },
@@ -1084,7 +1111,7 @@ createApp({
                     this.updateInterval - 500
                 );
             } else {
-                // 如果连续多次无变化，逐��增加更新间隔
+                // 如果连续多次无变化，逐增加更新间隔
                 if (this.consecutiveNoChanges >= 3) {
                     this.updateInterval = Math.min(
                         this.maxUpdateInterval,
@@ -1156,10 +1183,12 @@ createApp({
                         </a>
                         <button class="copy-button" onclick="copyToClipboard('${token.mint}')">复制</button>
                     </td>
+                    <!-- 暂时注释掉持币人数显示
                     <td class="holders-count" onclick="app.updateHoldersCount('${token.mint}')" title="点击更新">
                         ${token.holdersCount || '0'}
                         <span class="update-icon">🔄</span>
                     </td>
+                    -->
                     <td class="address-cell">
                         <a href="https://solscan.io/account/${token.signer}" target="_blank" class="address-link">
                             ${this.formatAddress(token.signer)}
@@ -1420,7 +1449,7 @@ createApp({
             const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
             const totalPages = Math.ceil(data.length / this.duplicatePageSize);
             
-            // 从后往前计算页码，这样最新的数据会在第一页
+            // 从后往前计算��码，这样最新的数据会在第一页
             const reversePage = totalPages - currentPage + 1;
             const start = (reversePage - 1) * this.duplicatePageSize;
             const end = start + this.duplicatePageSize;
