@@ -11,9 +11,17 @@ const cache = new NodeCache({
 }); // 3秒缓存
 const { initializeWebSocket } = require('./src/services/websocket/websocket');
 const WebSocket = require('ws');
+const TokenDataManager = require('./src/services/token/TokenDataManager');
 
 // 初始化数据库连接
-connectDB();
+connectDB().then(() => {
+    console.log('MongoDB连接成功');
+    // 初始化 TokenDataManager
+    const tokenManager = new TokenDataManager();
+    console.log('Token监控服务已启动');
+}).catch(err => {
+    console.error('MongoDB连接失败:', err);
+});
 
 // 使用 Map 存储用户连接信息
 const activeUsers = new Map();
@@ -254,7 +262,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
         // 构建基础查询条
         let baseQuery = { duplicateGroup: { $ne: null } };
         
-        // 如果有搜索查询，添加搜索条件
+        // ��果有搜索查询，添加搜索条件
         if (query) {
             baseQuery = {
                 ...baseQuery,
@@ -288,7 +296,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
 
             if (tokens.length < 2) return null; // 跳过只有一个代币的组
 
-            // 获取最新和最早的时间戳，并统一加4���时调整时区
+            // 获取最新和最早的时间戳，并统一加4时调整时区
             const latestTime = new Date(tokens[0].timestamp).getTime();
             const previousTime = tokens[1]?.timestamp 
                 ? new Date(tokens[1].timestamp).getTime() 
@@ -361,7 +369,7 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        console.error('获取重复组币失败:', error);
+        console.error('获取重复��币失败:', error);
         res.status(500).json({ error: error.message });
     }
 });
