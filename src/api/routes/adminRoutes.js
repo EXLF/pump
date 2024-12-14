@@ -27,6 +27,8 @@ async function updateVisitStats(ip, userAgent) {
                 uniqueVisitors: 0,
                 peakOnline: 0,
                 sourceDistribution: new Map(),
+                deviceDistribution: new Map(),
+                browserDistribution: new Map(),
                 hourlyStats: []
             });
         }
@@ -35,7 +37,7 @@ async function updateVisitStats(ip, userAgent) {
         stats.totalVisits += 1;
         onlineStats.todayVisits = stats.totalVisits;
 
-        // ��新来源分布
+        // 更新来源分布
         const geo = geoip.lookup(ip);
         if (geo) {
             const country = geo.country || 'unknown';
@@ -43,6 +45,31 @@ async function updateVisitStats(ip, userAgent) {
             stats.sourceDistribution.set(country, currentCount + 1);
             onlineStats.sourceDistribution.set(country, currentCount + 1);
         }
+
+        // 检测设备类型
+        let deviceType = 'Unknown';
+        if (userAgent) {
+            if (/mobile|android|iphone|ipad|phone/i.test(userAgent.toLowerCase())) {
+                deviceType = 'Mobile';
+            } else {
+                deviceType = 'Desktop';
+            }
+        }
+        const deviceCount = stats.deviceDistribution.get(deviceType) || 0;
+        stats.deviceDistribution.set(deviceType, deviceCount + 1);
+
+        // 检测浏览器类型
+        let browserType = 'Unknown';
+        if (userAgent) {
+            if (userAgent.includes('Chrome')) browserType = 'Chrome';
+            else if (userAgent.includes('Firefox')) browserType = 'Firefox';
+            else if (userAgent.includes('Safari')) browserType = 'Safari';
+            else if (userAgent.includes('Edge')) browserType = 'Edge';
+            else if (userAgent.includes('Opera')) browserType = 'Opera';
+            else if (userAgent.includes('MSIE') || userAgent.includes('Trident/')) browserType = 'IE';
+        }
+        const browserCount = stats.browserDistribution.get(browserType) || 0;
+        stats.browserDistribution.set(browserType, browserCount + 1);
 
         // 更新小时统计
         const currentHour = new Date().getHours();
@@ -113,6 +140,8 @@ router.get('/stats', async (req, res) => {
                 peakOnline: Math.max(stats.peakOnline, currentOnline, onlineStats.peakOnline),
                 avgOnlineTime,
                 sourceDistribution: Object.fromEntries(stats.sourceDistribution),
+                deviceDistribution: Object.fromEntries(stats.deviceDistribution),
+                browserDistribution: Object.fromEntries(stats.browserDistribution),
                 hourlyStats: stats.hourlyStats,
                 onlineTrend: onlineStats.onlineTrend
             } : {
@@ -120,6 +149,8 @@ router.get('/stats', async (req, res) => {
                 peakOnline: Math.max(currentOnline, onlineStats.peakOnline),
                 avgOnlineTime: 0,
                 sourceDistribution: {},
+                deviceDistribution: {},
+                browserDistribution: {},
                 hourlyStats: [],
                 onlineTrend: [{time: Date.now(), count: currentOnline}]
             }
@@ -140,12 +171,13 @@ router.get('/online-users', (req, res) => {
             for (const [clientId, userData] of global.activeUsers) {
                 if (now - userData.lastActive <= global.TIMEOUT) {
                     const geo = geoip.lookup(userData.ip);
+                    const onlineTime = userData.firstSeen ? now - userData.firstSeen : 0;
                     users.push({
                         clientId,
                         ip: userData.ip,
                         location: geo ? `${geo.country}${geo.city ? ` - ${geo.city}` : ''}` : '未知',
                         userAgent: userData.userAgent,
-                        onlineTime: now - userData.firstSeen,
+                        firstSeen: userData.firstSeen || now,
                         lastActive: userData.lastActive,
                         visitCount: userData.visitCount || 1
                     });

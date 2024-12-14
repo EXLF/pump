@@ -43,10 +43,22 @@
             </div>
         </div>
 
+        <!-- 设备和浏览器分布图表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium mb-4">设备类型分布</h2>
+                <div id="deviceDistributionChart" style="height: 300px;"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium mb-4">浏览器分布</h2>
+                <div id="browserDistributionChart" style="height: 300px;"></div>
+            </div>
+        </div>
+
         <!-- 在线用户列表 -->
         <div class="bg-white rounded-lg shadow">
             <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-gray-500 text-sm font-medium">在线用���列表</h2>
+                <h2 class="text-gray-500 text-sm font-medium">在线用户列表</h2>
             </div>
             <div class="px-6 py-4">
                 <div class="flex mb-4">
@@ -91,6 +103,8 @@
     <script>
         let onlineTrendChart = null;
         let sourceDistributionChart = null;
+        let deviceDistributionChart = null;
+        let browserDistributionChart = null;
         let currentPage = 1;
         const pageSize = 10;
         let userData = [];
@@ -99,6 +113,8 @@
         function initCharts() {
             onlineTrendChart = echarts.init(document.getElementById('onlineTrendChart'));
             sourceDistributionChart = echarts.init(document.getElementById('sourceDistributionChart'));
+            deviceDistributionChart = echarts.init(document.getElementById('deviceDistributionChart'));
+            browserDistributionChart = echarts.init(document.getElementById('browserDistributionChart'));
         }
 
         // 更新24小时在线趋势图
@@ -141,7 +157,11 @@
                     type: 'pie',
                     radius: '70%',
                     data: Object.entries(data).map(([name, value]) => ({
-                        name,
+                        name: name === 'CN' ? '中国' :
+                              name === 'US' ? '美国' :
+                              name === 'JP' ? '日本' :
+                              name === 'KR' ? '韩国' :
+                              name === 'unknown' ? '未知' : name,
                         value
                     })),
                     emphasis: {
@@ -156,8 +176,64 @@
             sourceDistributionChart.setOption(option);
         }
 
+        // 更新设备分布图
+        function updateDeviceDistributionChart(data) {
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c} ({d}%)'
+                },
+                series: [{
+                    type: 'pie',
+                    radius: '70%',
+                    data: Object.entries(data).map(([name, value]) => ({
+                        name: name === 'Desktop' ? '电脑端' :
+                              name === 'Mobile' ? '移动端' :
+                              name === 'Unknown' ? '未知' : name,
+                        value
+                    })),
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            };
+            deviceDistributionChart.setOption(option);
+        }
+
+        // 更新浏览器分布图
+        function updateBrowserDistributionChart(data) {
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c} ({d}%)'
+                },
+                series: [{
+                    type: 'pie',
+                    radius: '70%',
+                    data: Object.entries(data).map(([name, value]) => ({
+                        name: name === 'Unknown' ? '未知' : name,
+                        value
+                    })),
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            };
+            browserDistributionChart.setOption(option);
+        }
+
         // 格式化时间
         function formatDuration(ms) {
+            if (!ms || isNaN(ms)) return '0秒';
+            
             const seconds = Math.floor(ms / 1000);
             const minutes = Math.floor(seconds / 60);
             const hours = Math.floor(minutes / 60);
@@ -179,16 +255,17 @@
 
         // 更新用户列表
         function updateUserTable() {
-            const tbody = document.getElementById('userTableBody');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
             const timeFilter = document.getElementById('timeFilter').value;
             const now = Date.now();
-
-            // 过滤数据
+            
+            // 应用过滤器
             let filteredData = userData.filter(user => {
-                const matchesSearch = user.ip.toLowerCase().includes(searchTerm) || 
-                                   user.userAgent.toLowerCase().includes(searchTerm);
+                // 搜索过滤
+                const matchesSearch = user.ip.toLowerCase().includes(searchQuery) ||
+                                   user.userAgent.toLowerCase().includes(searchQuery);
                 
+                // 时间过滤
                 let matchesTime = true;
                 if (timeFilter !== 'all') {
                     const timeLimit = {
@@ -199,7 +276,7 @@
                     }[timeFilter];
                     matchesTime = (now - user.lastActive) <= timeLimit;
                 }
-
+                
                 return matchesSearch && matchesTime;
             });
 
@@ -208,13 +285,14 @@
             const end = start + pageSize;
             const pageData = filteredData.slice(start, end);
 
-            // 更新表格
+            // 更新表格内容
+            const tbody = document.getElementById('userTableBody');
             tbody.innerHTML = pageData.map(user => `
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.ip}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.location}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.userAgent}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDuration(user.onlineTime)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDuration(now - user.firstSeen)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDateTime(user.lastActive)}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.visitCount}</td>
                 </tr>
@@ -250,6 +328,8 @@
                     updateOnlineTrendChart([{time: Date.now(), count: statsData.currentOnline}]);
                 }
                 updateSourceDistributionChart(statsData.todayStats.sourceDistribution || {});
+                updateDeviceDistributionChart(statsData.todayStats.deviceDistribution || {});
+                updateBrowserDistributionChart(statsData.todayStats.browserDistribution || {});
 
                 // 获取在线用户数据
                 const usersResponse = await fetch('/admin/online-users');
@@ -285,6 +365,8 @@
             window.addEventListener('resize', () => {
                 onlineTrendChart.resize();
                 sourceDistributionChart.resize();
+                deviceDistributionChart.resize();
+                browserDistributionChart.resize();
             });
         });
     </script>

@@ -24,6 +24,16 @@ const visitStatsSchema = new mongoose.Schema({
         of: Number,
         default: new Map()
     },
+    deviceDistribution: {
+        type: Map,
+        of: Number,
+        default: new Map()
+    },
+    browserDistribution: {
+        type: Map,
+        of: Number,
+        default: new Map()
+    },
     hourlyStats: [{
         hour: Number,
         count: Number,
@@ -54,6 +64,8 @@ async function testCollection() {
                 uniqueVisitors: 0,
                 peakOnline: 0,
                 sourceDistribution: new Map(),
+                deviceDistribution: new Map(),
+                browserDistribution: new Map(),
                 hourlyStats: []
             });
 
