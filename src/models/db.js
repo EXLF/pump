@@ -28,10 +28,7 @@ const apiKeySchema = new mongoose.Schema({
 // 创建一个连接函数
 const connectDB = async () => {
     try {
-        await mongoose.connect('mongodb://localhost:27017/token_monitor', {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        await mongoose.connect('mongodb://localhost:27017/token_monitor');
         console.log('MongoDB连接成功');
     } catch (error) {
         console.error('MongoDB连接失败:', error);
