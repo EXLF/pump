@@ -3,6 +3,7 @@ module.exports = {
       {
         name: "token-server",
         script: "../server.js",
+        cwd: "/home/sol/pump/pump",
         watch: true,
         ignore_watch: ["node_modules", "logs"],
         instances: 1,
@@ -11,8 +12,8 @@ module.exports = {
           NODE_ENV: "production",
           PORT: 3000
         },
-        error_log: "logs/server-error.log",
-        out_log: "logs/server-out.log",
+        error_log: "../logs/server-error.log",
+        out_log: "../logs/server-out.log",
         log_date_format: "YYYY-MM-DD HH:mm:ss",
         max_memory_restart: "2G"
       }
