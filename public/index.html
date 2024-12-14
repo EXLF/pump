@@ -115,13 +115,10 @@
             <div class="container mx-auto px-4 py-8">
                 <div class="fixed inset-x-0 top-0 flex justify-center z-50">
                     <transition name="slide-fade">
-                        <div v-if="showCopyMessage"
-                            class="message-popup mt-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
+                        <div v-if="showCopyMessage" class="message-popup mt-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
                             <div class="flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-white" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7"></path>
+                                <svg class="w-5 h-5 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                                 </svg>
                                 <span>复制成功</span>
                             </div>
@@ -1127,16 +1124,6 @@
                     <span class="block mb-1 font-medium text-gray-700">为服务器续航，提供更稳定的服务</span>
                     <span class="block mb-1 font-medium text-gray-700">赚钱了，在力所能及的情况下可以支持一下感谢！</span>
                 </p>
-            </div>
-        </div>
-
-        <!-- 复制成功提示 -->
-        <div class="copy-toast" :class="{ 'show': showCopyMessage }">
-            <div class="copy-toast-content">
-                <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                </svg>
-                <span>已复制到剪贴板</span>
             </div>
         </div>
 
