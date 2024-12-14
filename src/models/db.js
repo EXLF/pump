@@ -7,13 +7,17 @@ const apiKeySchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    description: {
-        type: String,
-        required: true
-    },
     isActive: {
         type: Boolean,
         default: true
+    },
+    dailyUsage: {
+        type: Number,
+        default: 0
+    },
+    lastUsed: {
+        type: Date,
+        default: Date.now
     },
     createdAt: {
         type: Date,
@@ -24,15 +28,14 @@ const apiKeySchema = new mongoose.Schema({
 // 创建一个连接函数
 const connectDB = async () => {
     try {
-        await mongoose.connect('mongodb://localhost:27017/pump_tokens', {
-            maxPoolSize: 20,
-            w: 'majority',
-            readPreference: 'secondaryPreferred'
+        await mongoose.connect('mongodb://localhost:27017/token_monitor', {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
         });
         console.log('MongoDB连接成功');
-    } catch (err) {
-        console.error('MongoDB连接失败:', err);
-        process.exit(1);
+    } catch (error) {
+        console.error('MongoDB连接失败:', error);
+        throw error;
     }
 };
 
@@ -99,6 +102,19 @@ const addressAliasSchema = new mongoose.Schema({
         default: Date.now
     }
 });
+
+// 每天午夜重置使用次数
+setInterval(async () => {
+    try {
+        const now = new Date();
+        if (now.getHours() === 0 && now.getMinutes() === 0) {
+            await mongoose.model('ApiKey').updateMany({}, { dailyUsage: 0 });
+            console.log('已重置所有 API Key 的每日使用次数');
+        }
+    } catch (error) {
+        console.error('重置 API Key 使用次数失败:', error);
+    }
+}, 60 * 1000); // 每分钟检查一次
 
 // 导出连接函数和模型
 module.exports = {

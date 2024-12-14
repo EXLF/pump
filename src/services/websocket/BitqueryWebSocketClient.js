@@ -149,7 +149,7 @@ class BitqueryWebSocketClient extends EventEmitter {
         }
         
         if (this.apiKeys.length === 0) {
-            console.error("没有可用的 API keys");
+            console.error("没有可用��� API keys");
             return;
         }
 
@@ -214,6 +214,29 @@ class BitqueryWebSocketClient extends EventEmitter {
             ));
         } catch (error) {
             console.error('处理消息批次时出错:', error);
+        }
+    }
+
+    async reconnect(newApiKey) {
+        try {
+            // 关闭现有连接
+            if (this.ws) {
+                this.ws.close();
+                this.ws = null;
+            }
+
+            // 如果提供了新的 API Key，使用它
+            if (newApiKey) {
+                this.apiKeys = [newApiKey];
+                this.currentKeyIndex = 0;
+            }
+
+            // 重新连接
+            await this.connect();
+            console.log('WebSocket 已重新连接');
+        } catch (error) {
+            console.error('WebSocket 重连失败:', error);
+            throw error;
         }
     }
 }

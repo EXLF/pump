@@ -358,6 +358,49 @@ class TokenDataManager {
             .select('duplicateGroup');
         return (maxGroup?.duplicateGroup || 0) + 1;
     }
+
+    async rotateApiKey() {
+        try {
+            // 获取所有可用的 API Keys
+            const keys = await ApiKey.find({
+                isActive: true,
+                dailyUsage: { $lt: this.maxDailyUsage }
+            }).sort({ lastUsed: 1 });
+
+            if (keys.length === 0) {
+                console.error('没有可用的 API Keys');
+                return;
+            }
+
+            // 选择最久未使用的 key
+            const selectedKey = keys[0];
+
+            // 更新使用时间
+            await ApiKey.findByIdAndUpdate(selectedKey._id, {
+                lastUsed: new Date(),
+                $inc: { dailyUsage: 1 }
+            });
+
+            // 更新当前使用的 key
+            this.currentApiKey = selectedKey.key;
+            console.log(`已轮换到新的 API Key: ${selectedKey.key.substring(0, 10)}...`);
+
+            // 如果 WebSocket 客户端存在且已连接，重新连接
+            if (this.wsClient && this.wsClient.reconnect) {
+                try {
+                    await this.wsClient.reconnect(this.currentApiKey);
+                } catch (wsError) {
+                    console.error('WebSocket 重连失败，尝试重新初始化连接:', wsError);
+                    this.initialize();
+                }
+            } else if (!this.wsClient) {
+                console.log('WebSocket 客户端未初始化，正在初始化...');
+                this.initialize();
+            }
+        } catch (error) {
+            console.error('API Key 轮换失败:', error);
+        }
+    }
 }
 
 module.exports = TokenDataManager; 

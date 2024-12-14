@@ -80,7 +80,7 @@ function getClientId(req) {
     return `${ip}-${userAgent}`;
 }
 
-// 定期清理过期用户
+// 定期处理过期用户
 setInterval(() => {
     const now = Date.now();
     for (const [clientId, lastActive] of activeUsers) {
@@ -197,10 +197,13 @@ app.get('/api/tokens', async (req, res) => {
             return res.json(result);
         }
 
+        // 构建查询条件
         const query = {};
         if (groupNumber !== null) {
+            // 如果指定了组号，只返回该组的代币
             query.duplicateGroup = groupNumber;
         } else if (duplicatesOnly) {
+            // 如果只看重复的，返回所有有重复组号的代币
             query.duplicateGroup = { $ne: null };
         }
 
@@ -222,6 +225,7 @@ app.get('/api/tokens', async (req, res) => {
             'metadata.github': 1
         };
 
+        // 并行执行查询
         const [tokens, total] = await Promise.all([
             Token.find(query)
                 .select(projection)
@@ -232,6 +236,7 @@ app.get('/api/tokens', async (req, res) => {
             Token.countDocuments(query)
         ]);
 
+        // 调整时间为 UTC+8
         tokens.forEach(token => {
             token.timestamp = new Date(token.timestamp);
         });
@@ -256,18 +261,23 @@ app.get('/api/tokens', async (req, res) => {
 // 获取重复代币列表
 app.get('/api/duplicate-tokens', async (req, res) => {
     try {
-        const { query } = req.query;
-        const cacheKey = query ? `duplicate_tokens_search_${query}` : 'duplicate_tokens';
+        const { query, groupNumber } = req.query;
+        const cacheKey = `duplicate_tokens_${query || ''}_${groupNumber || ''}`;
         
-        // 构建基础查询条
+        // 构建基础查询条件
         let baseQuery = { duplicateGroup: { $ne: null } };
         
-        // ��果有搜索查询，添加搜索条件
+        // 如果指定了组号，只返回该组的代币
+        if (groupNumber) {
+            baseQuery.duplicateGroup = parseInt(groupNumber);
+        }
+        
+        // 如果有搜索查询，添加搜索条件
         if (query) {
             baseQuery = {
                 ...baseQuery,
                 $or: [
-                    { symbol: new RegExp(query, 'i') },  // 使用模糊匹配而不是精确匹配
+                    { symbol: new RegExp(query, 'i') },
                     { mint: new RegExp(query, 'i') }
                 ]
             };
@@ -296,7 +306,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
 
             if (tokens.length < 2) return null; // 跳过只有一个代币的组
 
-            // 获取最新和最早的时间戳，并统一加4时调整时区
+            // 获取最新和最早的时间戳
             const latestTime = new Date(tokens[0].timestamp).getTime();
             const previousTime = tokens[1]?.timestamp 
                 ? new Date(tokens[1].timestamp).getTime() 
@@ -369,7 +379,7 @@ app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
 
         res.json(result);
     } catch (error) {
-        console.error('获取重复��币失败:', error);
+        console.error('获取重复币失败:', error);
         res.status(500).json({ error: error.message });
     }
 });

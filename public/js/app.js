@@ -181,11 +181,11 @@ createApp({
         
         getDuplicateTypeClass(type) {
             const classMap = {
-                'twitter_status': 'bg-green-100 text-green-800',
-                'symbol_match': 'bg-yellow-100 text-yellow-800',
-                'name_match': 'bg-red-100 text-red-800'
+                'twitter_status': 'bg-green-100',
+                'symbol_match': 'bg-yellow-100',
+                'name_match': 'bg-red-100'
             };
-            return classMap[type] || 'bg-gray-100 text-gray-800';
+            return classMap[type] || 'bg-gray-100';
         },
         
         getDuplicateColor(token) {
@@ -213,18 +213,24 @@ createApp({
 
         async fetchDuplicateTokens() {
             try {
+                // 如果正在查看特定组且不是强制刷新，则保持当前数据
+                if (this.selectedDuplicateGroup && !arguments[0]) {
+                    return;
+                }
+
                 const response = await axios.get('/api/duplicate-tokens');
-                // 对数据进行时间排序
-                this.duplicateTokens = response.data.sort((a, b) => 
+                const newData = response.data.sort((a, b) => 
                     new Date(b.latestTime) - new Date(a.latestTime)
                 );
                 
-                // 计算总页数
-                this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
-                
-                // 保持在当前页，除非是初始化或效
-                if (!this.duplicateCurrentPage || this.duplicateCurrentPage > this.duplicateTotalPages) {
-                    this.duplicateCurrentPage = 1;  // 确保新数据显示在第一页
+                // 只在没有选中特定组时更新数据
+                if (!this.selectedDuplicateGroup) {
+                    this.duplicateTokens = newData;
+                    this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
+                    
+                    if (!this.duplicateCurrentPage || this.duplicateCurrentPage > this.duplicateTotalPages) {
+                        this.duplicateCurrentPage = 1;
+                    }
                 }
             } catch (error) {
                 console.error('获取重复代币数据失败:', error);
@@ -233,6 +239,11 @@ createApp({
 
         async fetchTokens(forceRefresh = false) {
             if (this.loading && !forceRefresh) return;
+            
+            // 如果正在查看特定重复组且不是强制刷新，则不更新数据
+            if (this.selectedDuplicateGroup && this.activeTab === 'duplicates' && !forceRefresh) {
+                return;
+            }
             
             this.loading = true;
             this.error = null;
@@ -243,7 +254,8 @@ createApp({
                     _t: Date.now()
                 };
                 
-                if (this.selectedDuplicateGroup) {
+                // 如果有选中的重复组，并且当前在重复标签页
+                if (this.selectedDuplicateGroup && this.activeTab === 'duplicates') {
                     params.groupNumber = this.selectedDuplicateGroup;
                 } else if (this.activeTab === 'duplicates') {
                     params.duplicatesOnly = true;
@@ -258,9 +270,11 @@ createApp({
                     }
                 });
                 
-                if ((!this.selectedDuplicateGroup && !params.groupNumber) || 
-                    (this.selectedDuplicateGroup === params.groupNumber)) {
-                    // 检查数据是否有变化
+                // 只有在以下情况才更新数据：
+                // 1. 没有选中重复组
+                // 2. 不在重复标签页
+                // 3. 强制刷新
+                if (!this.selectedDuplicateGroup || this.activeTab !== 'duplicates' || forceRefresh) {
                     const hasChanged = this.hasDataChanged(this.tokens, response.data.tokens);
                     if (hasChanged) {
                         this.updateTokensData(response.data);
@@ -316,21 +330,30 @@ createApp({
         },
 
         async showDuplicateGroupTokens(group) {
-            if (this.loading) return;
-            
             try {
-                this.loading = true;
+                // 设置选中的重复组
                 this.selectedDuplicateGroup = group.groupNumber;
                 this.selectedGroupSymbol = group.symbol;
-                this.currentPage = 1;
                 this.activeTab = 'duplicates';
+                this.currentPage = 1;
                 
-                await this.fetchTokens();
+                // 获取该组的代币
+                const response = await axios.get('/api/tokens', {
+                    params: {
+                        groupNumber: group.groupNumber,
+                        page: this.currentPage
+                    }
+                });
+
+                // 更新左侧列表数据
+                this.tokens = response.data.tokens;
+                this.total = response.data.total;
+                this.pages = response.data.pages;
+
+                // 更新标题
                 this.updatePageTitle();
             } catch (error) {
                 console.error('获取重复组代币失败:', error);
-            } finally {
-                this.loading = false;
             }
         },
 
@@ -561,14 +584,14 @@ createApp({
             this.searchPages = 1;
             this.searchCurrentPage = 1;
             
-            // 恢复原始数据显示
+            // 恢复始数据显示
             this.fetchTokens();
             
             // 恢复自动刷新
             this.startPolling();
         },
 
-        // 搜索重复代币
+        // 搜索复代币
         async searchDuplicateTokens() {
             if (!this.duplicateSearchQuery.trim()) {
                 return;
@@ -606,7 +629,7 @@ createApp({
 
         // 添加重复组数据的轮询方法
         startDuplicatePolling() {
-            this.fetchDuplicateTokens(); // 立即获取一次数据
+            this.fetchDuplicateTokens(); // 立即获取次数据
             this.duplicatePolling = setInterval(() => {
                 if (!this.isDuplicateSearchActive) {  // 只在非搜索态下更新
                     this.fetchDuplicateTokens();
@@ -675,7 +698,7 @@ createApp({
             }, 2000);
         },
 
-        // 获取在线用数
+        // 获取在线用户数
         async fetchOnlineUsers() {
             try {
                 const response = await axios.get('/api/online-users');
@@ -699,7 +722,9 @@ createApp({
             socket.addEventListener('open', () => {
                 console.log('WebSocket 连接已建立');
                 // 连接成功后立即获取一次数据
-                this.fetchTokens(true);
+                if (!this.selectedDuplicateGroup || this.activeTab !== 'duplicates') {
+                    this.fetchTokens(true);
+                }
                 
                 // 启动心跳
                 this.startHeartbeat(socket);
@@ -708,7 +733,9 @@ createApp({
             socket.addEventListener('message', (event) => {
                 try {
                     const { type, data } = JSON.parse(event.data);
-                    if (type === 'tokensUpdate' && !this.isSearchActive) {
+                    // 只在没有选中特定重复组时更新数据
+                    if (type === 'tokensUpdate' && !this.isSearchActive && 
+                        (!this.selectedDuplicateGroup || this.activeTab !== 'duplicates')) {
                         this.updateTokensData(data);
                     } else if (type === 'onlineUsers') {
                         this.onlineUsers = data.onlineUsers;
@@ -791,7 +818,7 @@ createApp({
             }
         },
 
-        // 修改显示编辑别名的方
+        // 修改显示编辑别名的方法
         showEditAlias(address) {
             console.log('尝试编辑地址:', address); // 添加日志
             console.log('当前别名Map:', this.addressAliases); // 添加日志
@@ -844,7 +871,7 @@ createApp({
             }
         },
 
-        // 获取显示文本（别名或地址���
+        // 获取显示文本（别名或地址
         getDisplayAddress(address) {
             return this.addressAliases.get(address) || this.formatShortAddress(address);
         },
@@ -869,7 +896,7 @@ createApp({
                     // 如果有新代币且声音开启播放提示音
                     if (newDevTokens.length > 0 && this.soundEnabled) {
                         this.playNotification();
-                        // 可以添加桌面通知
+                        // 可以���加桌面通知
                         this.showNotification(`发现 ${newDevTokens.length} 个新的 Dev 代币`);
                     }
                 }
@@ -889,7 +916,7 @@ createApp({
             }
         },
 
-        // 添加新的 Dev 地址
+        // 添加新 Dev 地址
         async addNewDev() {
             try {
                 // 验证输入
@@ -967,7 +994,7 @@ createApp({
             return this.formatAddress(token.signer);
         },
 
-        // 加载地址别名
+        // 载地址别名
         async loadAddressAliases() {
             try {
                 const response = await axios.get('/api/address-aliases');
@@ -1120,7 +1147,7 @@ createApp({
                 }
             }
             
-            // 重新设置轮询间隔
+            // 重新设置询间隔
             if (this.refreshInterval) {
                 clearInterval(this.refreshInterval);
             }
@@ -1183,7 +1210,7 @@ createApp({
                         </a>
                         <button class="copy-button" onclick="copyToClipboard('${token.mint}')">复制</button>
                     </td>
-                    <!-- 暂时注释掉持币人数显示
+                    <!-- 暂时注释掉持人数显示
                     <td class="holders-count" onclick="app.updateHoldersCount('${token.mint}')" title="点击更新">
                         ${token.holdersCount || '0'}
                         <span class="update-icon">🔄</span>
@@ -1256,21 +1283,29 @@ createApp({
                 console.error('复制失败:', err);
             }
         },
+
+        // 添加新方法用于重复次数的显示
+        formatDuplicateCount(count) {
+            return `<span class="text-blue-500">${count}</span>`;
+        }
     },
     mounted() {
         // 初始化数据
         this.fetchTokens(true);
-        this.fetchDuplicateTokens();
+        this.fetchDuplicateTokens(true);
         this.fetchAddressAliases();
         this.fetchDevTokens();
         this.loadAddressAliases();
         this.fetchDevList();
         
-        // 初始化更新间隔
+        // 修改自动刷新逻辑
         this.refreshInterval = setInterval(() => {
             if (!this.isSearchActive) {
-                this.fetchTokens();
-                this.fetchDuplicateTokens();
+                // 只在没有选中特定重复组时进行自动刷新
+                if (!this.selectedDuplicateGroup || this.activeTab !== 'duplicates') {
+                    this.fetchTokens();
+                    this.fetchDuplicateTokens();
+                }
             }
         }, this.updateInterval);
         
@@ -1442,14 +1477,14 @@ createApp({
             // 先获取要显示的数据源（搜索结果或全数据）
             let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
             
-            // 按照 latestTime 降序排序，这样最新的会在最前面
+            // 按照 latestTime 降序排序，这样最的会在最前面
             data = [...data].sort((a, b) => new Date(b.latestTime) - new Date(a.latestTime));
             
             // 计算分页
             const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
             const totalPages = Math.ceil(data.length / this.duplicatePageSize);
             
-            // 从后往前计算��码，这样最新的数据会在第一页
+            // 从后往前计算码，这样最新的数据会在第一页
             const reversePage = totalPages - currentPage + 1;
             const start = (reversePage - 1) * this.duplicatePageSize;
             const end = start + this.duplicatePageSize;
