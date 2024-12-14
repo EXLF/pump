@@ -659,7 +659,29 @@ createApp({
         // 统一的复制方法
         async copyText(text) {
             try {
-                await navigator.clipboard.writeText(text);
+                // 首先尝试使用 Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    // 后备方案：使用传统的复制方法
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-9999px';
+                    textArea.style.top = '0';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                    } catch (err) {
+                        console.error('复制失败:', err);
+                        return;
+                    } finally {
+                        document.body.removeChild(textArea);
+                    }
+                }
                 
                 // 清除之前的定时器
                 if (this.copyMessageTimer) {
@@ -672,7 +694,7 @@ createApp({
                 // 设置新的定时器
                 this.copyMessageTimer = setTimeout(() => {
                     this.showCopyMessage = false;
-                }, 2000); // 2秒后隐藏提示
+                }, 2000);
             } catch (err) {
                 console.error('复制失败:', err);
             }
@@ -885,7 +907,7 @@ createApp({
                 this.previousDevTokens = newTokens;
                 this.lastDevUpdate = new Date();
             } catch (error) {
-                console.error('获取Dev代币失败:', error);
+                console.error('获取Dev��币失败:', error);
             }
         },
 
@@ -1055,7 +1077,7 @@ createApp({
                 );
 
                 if (cachedData) {
-                    console.log('使用缓存数据');
+                    console.log('使用缓��数据');
                     this.tokens = cachedData.tokens;
                     this.totalTokens = cachedData.total;
                     return;
@@ -1264,7 +1286,7 @@ createApp({
             }
         }, this.updateInterval);
         
-        // WebSocket连接
+        // WebSocket连���
         this.connectWebSocket();
         
         // 其他初始化
