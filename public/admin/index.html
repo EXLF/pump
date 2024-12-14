@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线用户管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">在线用户管理</h1>
+
+        <!-- 统计卡片 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium">当前在线</h2>
+                <p class="text-3xl font-bold text-blue-600" id="currentOnline">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium">今日访问</h2>
+                <p class="text-3xl font-bold text-green-600" id="todayVisits">0</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium">平均在线时长</h2>
+                <p class="text-3xl font-bold text-purple-600" id="avgOnlineTime">0分钟</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium">峰值在线</h2>
+                <p class="text-3xl font-bold text-red-600" id="peakOnline">0</p>
+            </div>
+        </div>
+
+        <!-- 图表区域 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium mb-4">24小时在线趋势</h2>
+                <div id="onlineTrendChart" style="height: 300px;"></div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-gray-500 text-sm font-medium mb-4">访问来源分布</h2>
+                <div id="sourceDistributionChart" style="height: 300px;"></div>
+            </div>
+        </div>
+
+        <!-- 在线用户列表 -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-gray-500 text-sm font-medium">在线用���列表</h2>
+            </div>
+            <div class="px-6 py-4">
+                <div class="flex mb-4">
+                    <input type="text" id="searchInput" placeholder="按IP或User Agent搜索" class="flex-1 px-4 py-2 border rounded-lg mr-4">
+                    <select id="timeFilter" class="px-4 py-2 border rounded-lg">
+                        <option value="all">全部时间</option>
+                        <option value="5m">最近5分钟</option>
+                        <option value="15m">最近15分钟</option>
+                        <option value="30m">最近30分钟</option>
+                        <option value="1h">最近1小时</option>
+                    </select>
+                    <button id="refreshBtn" class="ml-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">刷新数据</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP地址</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">地理位置</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">USER AGENT</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">在线时长</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最后活动时间</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">访问次数</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- 用户数据将通过JavaScript动态插入 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4 flex justify-between items-center">
+                    <span class="text-sm text-gray-500" id="totalRecords">显示 1 - 0 共 0 条记录</span>
+                    <div class="flex">
+                        <button id="prevPage" class="px-3 py-1 border rounded-l-lg hover:bg-gray-100">上一页</button>
+                        <button id="nextPage" class="px-3 py-1 border rounded-r-lg hover:bg-gray-100">下一页</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let onlineTrendChart = null;
+        let sourceDistributionChart = null;
+        let currentPage = 1;
+        const pageSize = 10;
+        let userData = [];
+
+        // 初始化图表
+        function initCharts() {
+            onlineTrendChart = echarts.init(document.getElementById('onlineTrendChart'));
+            sourceDistributionChart = echarts.init(document.getElementById('sourceDistributionChart'));
+        }
+
+        // 更新24小时在线趋势图
+        function updateOnlineTrendChart(data) {
+            const option = {
+                tooltip: {
+                    trigger: 'axis'
+                },
+                xAxis: {
+                    type: 'time',
+                    axisLabel: {
+                        formatter: function(value) {
+                            const date = new Date(value);
+                            return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    min: 0
+                },
+                series: [{
+                    data: data.map(item => [item.time, item.count]),
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: {}
+                }]
+            };
+            onlineTrendChart.setOption(option);
+        }
+
+        // 更新来源分布图
+        function updateSourceDistributionChart(data) {
+            const option = {
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{b}: {c} ({d}%)'
+                },
+                series: [{
+                    type: 'pie',
+                    radius: '70%',
+                    data: Object.entries(data).map(([name, value]) => ({
+                        name,
+                        value
+                    })),
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }]
+            };
+            sourceDistributionChart.setOption(option);
+        }
+
+        // 格式化时间
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            
+            if (hours > 0) {
+                return `${hours}小时${minutes % 60}分钟`;
+            } else if (minutes > 0) {
+                return `${minutes}分钟`;
+            } else {
+                return `${seconds}秒`;
+            }
+        }
+
+        // 格式化日期时间
+        function formatDateTime(timestamp) {
+            const date = new Date(timestamp);
+            return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+        }
+
+        // 更新用户列表
+        function updateUserTable() {
+            const tbody = document.getElementById('userTableBody');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const timeFilter = document.getElementById('timeFilter').value;
+            const now = Date.now();
+
+            // 过滤数据
+            let filteredData = userData.filter(user => {
+                const matchesSearch = user.ip.toLowerCase().includes(searchTerm) || 
+                                   user.userAgent.toLowerCase().includes(searchTerm);
+                
+                let matchesTime = true;
+                if (timeFilter !== 'all') {
+                    const timeLimit = {
+                        '5m': 5 * 60 * 1000,
+                        '15m': 15 * 60 * 1000,
+                        '30m': 30 * 60 * 1000,
+                        '1h': 60 * 60 * 1000
+                    }[timeFilter];
+                    matchesTime = (now - user.lastActive) <= timeLimit;
+                }
+
+                return matchesSearch && matchesTime;
+            });
+
+            // 分页
+            const start = (currentPage - 1) * pageSize;
+            const end = start + pageSize;
+            const pageData = filteredData.slice(start, end);
+
+            // 更新表格
+            tbody.innerHTML = pageData.map(user => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.ip}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.location}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.userAgent}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDuration(user.onlineTime)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatDateTime(user.lastActive)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.visitCount}</td>
+                </tr>
+            `).join('');
+
+            // 更新分页信息
+            document.getElementById('totalRecords').textContent = 
+                `显示 ${start + 1} - ${Math.min(end, filteredData.length)} 共 ${filteredData.length} 条记录`;
+
+            // 更新分页按钮状态
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = end >= filteredData.length;
+        }
+
+        // 获取并更新数据
+        async function fetchAndUpdateData() {
+            try {
+                // 获取统计数据
+                const statsResponse = await fetch('/admin/stats');
+                const statsData = await statsResponse.json();
+
+                // 更新统计卡片
+                document.getElementById('currentOnline').textContent = statsData.currentOnline || 0;
+                document.getElementById('todayVisits').textContent = statsData.todayStats.totalVisits || 0;
+                document.getElementById('avgOnlineTime').textContent = 
+                    `${Math.floor((statsData.todayStats.avgOnlineTime || 0) / 60)}分钟`;
+                document.getElementById('peakOnline').textContent = statsData.todayStats.peakOnline || 0;
+
+                // 更新图表
+                if (statsData.todayStats.onlineTrend && statsData.todayStats.onlineTrend.length > 0) {
+                    updateOnlineTrendChart(statsData.todayStats.onlineTrend);
+                } else {
+                    updateOnlineTrendChart([{time: Date.now(), count: statsData.currentOnline}]);
+                }
+                updateSourceDistributionChart(statsData.todayStats.sourceDistribution || {});
+
+                // 获取在线用户数据
+                const usersResponse = await fetch('/admin/online-users');
+                userData = await usersResponse.json();
+                updateUserTable();
+            } catch (error) {
+                console.error('获取数据失败:', error);
+            }
+        }
+
+        // 初始化
+        window.addEventListener('load', () => {
+            initCharts();
+            fetchAndUpdateData();
+            setInterval(fetchAndUpdateData, 30000); // 每30秒更新一次数据
+
+            // 事件监听器
+            document.getElementById('searchInput').addEventListener('input', updateUserTable);
+            document.getElementById('timeFilter').addEventListener('change', updateUserTable);
+            document.getElementById('refreshBtn').addEventListener('click', fetchAndUpdateData);
+            document.getElementById('prevPage').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updateUserTable();
+                }
+            });
+            document.getElementById('nextPage').addEventListener('click', () => {
+                currentPage++;
+                updateUserTable();
+            });
+
+            // 窗口大小改变时重绘图表
+            window.addEventListener('resize', () => {
+                onlineTrendChart.resize();
+                sourceDistributionChart.resize();
+            });
+        });
+    </script>
+</body>
+</html> 

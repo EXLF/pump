@@ -1,0 +1,305 @@
+/* 移动端样式 - 仅在屏幕宽度小于768px时生效 */
+@media screen and (max-width: 768px) {
+    /* 导航栏样式 */
+    .nav-container {
+        padding: 0.5rem 1rem;
+    }
+
+    .nav-logo {
+        font-size: 1.25rem;
+    }
+
+    .nav-subtitle {
+        display: none;
+    }
+
+    .nav-buttons {
+        display: none;
+    }
+
+    .mobile-menu-button {
+        display: block;
+    }
+
+    /* 移动端菜单 */
+    .mobile-menu {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 80%;
+        max-width: 300px;
+        background: white;
+        box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+        z-index: 1000;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+    }
+
+    .mobile-menu.active {
+        transform: translateX(0);
+    }
+
+    .mobile-menu-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 999;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+    }
+
+    .mobile-menu-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* 搜索框样式 */
+    .search-container {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .search-button {
+        width: 100%;
+    }
+
+    /* 代币列表样式 */
+    .token-list {
+        margin: 0 -1rem;
+    }
+
+    .token-card {
+        border-radius: 0;
+        margin-bottom: 0.5rem;
+        border-left: none;
+        border-right: none;
+    }
+
+    .token-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .token-symbol {
+        font-size: 1rem;
+    }
+
+    .token-address {
+        font-size: 0.75rem;
+        word-break: break-all;
+    }
+
+    /* 隐藏次要信息 */
+    .hide-on-mobile {
+        display: none !important;
+    }
+
+    /* 社交媒体图标 */
+    .social-icons {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .social-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    /* 操作按钮 */
+    .action-buttons {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .action-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* 加载状态 */
+    .loading-spinner {
+        width: 2rem;
+        height: 2rem;
+    }
+
+    /* 复制成功提示 */
+    .copy-success {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+
+    /* 标签页样式 */
+    .tabs {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        padding: 0 1rem;
+    }
+
+    .tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    /* 分页控件 */
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+
+    .page-button {
+        min-width: 2rem;
+        height: 2rem;
+    }
+
+    /* 触摸优化 */
+    .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* 滚动条优化 */
+    ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 2px;
+    }
+
+    /* 动画效果 */
+    .slide-up {
+        animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* 列表视图优化 */
+    .token-list-view {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .token-list-item {
+        background: white;
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .token-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+    .token-body {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .token-image {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .token-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    /* 重复标记样式 */
+    .duplicate-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .duplicate-low {
+        background-color: #EFF6FF;
+        color: #3B82F6;
+    }
+
+    .duplicate-medium {
+        background-color: #FEF3C7;
+        color: #D97706;
+    }
+
+    .duplicate-high {
+        background-color: #FEE2E2;
+        color: #DC2626;
+    }
+
+    /* 底部工具栏 */
+    .mobile-toolbar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-around;
+        z-index: 100;
+    }
+
+    .toolbar-button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        color: #6B7280;
+    }
+
+    .toolbar-button.active {
+        color: #3B82F6;
+    }
+
+    .toolbar-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+
+    .toolbar-label {
+        font-size: 0.75rem;
+    }
+
+    /* 底部安全区域 */
+    .safe-area-bottom {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+} 

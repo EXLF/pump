@@ -12,10 +12,16 @@ const cache = new NodeCache({
 const { initializeWebSocket } = require('./src/services/websocket/websocket');
 const WebSocket = require('ws');
 const TokenDataManager = require('./src/services/token/TokenDataManager');
+const { router: adminRouter, updateVisitStats } = require('./src/api/routes/adminRoutes');
+const { testCollection } = require('./src/models/visitStats');
 
 // 初始化数据库连接
-connectDB().then(() => {
+connectDB().then(async () => {
     console.log('MongoDB连接成功');
+    
+    // 测试访问统计集合
+    await testCollection();
+    
     // 初始化 TokenDataManager
     const tokenManager = new TokenDataManager();
     console.log('Token监控服务已启动');
@@ -25,7 +31,7 @@ connectDB().then(() => {
 
 // 使用 Map 存储用户连接信息
 const activeUsers = new Map();
-const wsConnections = new Map();
+global.wsConnections = new Map(); // 使用全局变量存储WebSocket连接
 const TIMEOUT = 5 * 60 * 1000; // 5分钟超时
 const HEARTBEAT_INTERVAL = 30 * 1000; // 30秒心跳间隔
 const HEARTBEAT_TIMEOUT = 35 * 1000; // 35秒心跳超时
@@ -41,7 +47,7 @@ function setupHeartbeat(ws, clientId) {
     const heartbeat = setInterval(() => {
         if (!ws.isAlive) {
             clearInterval(heartbeat);
-            wsConnections.delete(clientId);
+            global.wsConnections.delete(clientId);
             updateOnlineCount();
             return ws.terminate();
         }
@@ -52,65 +58,60 @@ function setupHeartbeat(ws, clientId) {
     // 连接关闭时清理
     ws.on('close', () => {
         clearInterval(heartbeat);
-        wsConnections.delete(clientId);
+        global.wsConnections.delete(clientId);
         updateOnlineCount();
     });
 }
 
 // 更新在线人数
 function updateOnlineCount() {
-    const onlineCount = wsConnections.size;
-    // 广播在线人数给所有连接
-    wsConnections.forEach((ws) => {
-        if (ws.readyState === 1) { // 1 = OPEN
+    const count = global.wsConnections.size;
+    // 广播更新
+    global.wsConnections.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
-                type: 'onlineUsers',
-                data: { onlineUsers: onlineCount }
+                type: 'onlineCount',
+                data: count
             }));
         }
     });
 }
 
-// IP 过滤和用户统计
-function getClientId(req) {
-    const ip = req.headers['x-forwarded-for'] || 
-               req.connection.remoteAddress || 
-               req.socket.remoteAddress;
-    const userAgent = req.headers['user-agent'];
-    return `${ip}-${userAgent}`;
-}
-
-// 定期处理过期用户
-setInterval(() => {
-    const now = Date.now();
-    for (const [clientId, lastActive] of activeUsers) {
-        if (now - lastActive > TIMEOUT) {
-            activeUsers.delete(clientId);
-            const ws = wsConnections.get(clientId);
-            if (ws) {
-                ws.terminate();
-                wsConnections.delete(clientId);
-            }
-        }
-    }
-    updateOnlineCount();
-}, 10 * 1000); // 每10秒检查一次
-
 const app = express();
-const port = 3000;
-
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-app.use(express.json());
-app.use('/api/keys', apiKeysRouter);
-app.use('/admin', express.static('public/admin'));
+// 使用管理路由
+app.use('/admin', adminRouter);
+
+// 记录访问统计的中间件
+app.use((req, res, next) => {
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    updateVisitStats(ip, userAgent);
+    next();
+});
 
 // 中间件
 app.use((req, res, next) => {
     const clientId = getClientId(req);
-    activeUsers.set(clientId, Date.now());
+    const now = Date.now();
+    
+    // 获取或创建用户数据
+    let userData = global.activeUsers.get(clientId) || {
+        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        firstSeen: now,
+        lastActive: now,
+        visitCount: 0
+    };
+    
+    // 更新用户数据
+    userData.lastActive = now;
+    userData.visitCount++;
+    
+    global.activeUsers.set(clientId, userData);
     next();
 });
 
@@ -157,16 +158,16 @@ app.get('/api/online-users', (req, res) => {
             activeCount++;
         } else {
             activeUsers.delete(clientId);
-            const ws = wsConnections.get(clientId);
+            const ws = global.wsConnections.get(clientId);
             if (ws) {
                 ws.terminate();
-                wsConnections.delete(clientId);
+                global.wsConnections.delete(clientId);
             }
         }
     }
     
     res.json({ 
-        onlineUsers: Math.max(wsConnections.size, activeCount),
+        onlineUsers: Math.max(global.wsConnections.size, activeCount),
         lastUpdate: new Date().toISOString()
     });
 });
@@ -346,7 +347,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
 
 
 
-// 修改特定重复组的获取端点，添加分页支持
+// 特定重复的获取端点，添加分页支持
 app.get('/api/duplicate-group-tokens/:groupNumber', async (req, res) => {
     try {
         const groupNumber = parseInt(req.params.groupNumber);
@@ -499,7 +500,7 @@ app.get('/api/dev-tokens', cacheMiddleware(10), async (req, res) => { // 只缓�
         
         const devAddresses = aliases.map(a => a.address);
         
-        // 只获取最近1小时内的代币
+        // 只取最近1小时内的代币
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         
         const tokens = await Token.find({
@@ -522,18 +523,38 @@ app.get('/api/dev-tokens', cacheMiddleware(10), async (req, res) => { // 只缓�
     }
 });
 
+// 获取客户端ID
+function getClientId(req) {
+    const ip = req.headers['x-forwarded-for'] || 
+               req.connection.remoteAddress || 
+               req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    return `${ip}-${userAgent}`;
+}
+
+// 扩展用户连接信息存储
+global.activeUsers = new Map();
+global.TIMEOUT = 5 * 60 * 1000; // 5分钟超时
+
+const port = 3000;
 const server = app.listen(port, () => {
     console.log(`服务器运行在 http://localhost:${port}`);
 });
 
-// 初始化 WebSocket
+// 始化 WebSocket
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws, req) => {
     const clientId = getClientId(req);
-    wsConnections.set(clientId, ws);
+    global.wsConnections.set(clientId, ws);
     setupHeartbeat(ws, clientId);
     updateOnlineCount();
+
+    // 发送初始在线人数
+    ws.send(JSON.stringify({
+        type: 'onlineCount',
+        data: global.wsConnections.size
+    }));
 
     ws.on('message', (message) => {
         try {

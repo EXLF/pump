@@ -1130,6 +1130,40 @@
     </div>
 
     <script src="/js/app.js"></script>
+
+    <!-- WebSocket连接 -->
+    <script>
+        const ws = new WebSocket(`ws://${window.location.host}`);
+        ws.onmessage = function(event) {
+            try {
+                const data = JSON.parse(event.data);
+                if (data.type === 'onlineCount') {
+                    // 更新导航栏中的在线人数显示
+                    const onlineCountElement = document.querySelector('.text-lg.text-gray-500 .font-medium');
+                    if (onlineCountElement) {
+                        onlineCountElement.textContent = data.data;
+                    }
+                }
+            } catch (error) {
+                console.error('WebSocket消息处理错误:', error);
+            }
+        };
+
+        // 发送心跳
+        setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'heartbeat' }));
+            }
+        }, 30000);
+
+        // 重连机制
+        ws.onclose = function() {
+            console.log('WebSocket连接已关闭，尝试重新连接...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 5000);
+        };
+    </script>
 </body>
 
 </html>
