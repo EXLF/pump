@@ -21,8 +21,9 @@
   "dependencies": {
     "@bull-board/api": "^6.5.3",
     "@bull-board/express": "^6.5.3",
+    "@metaplex-foundation/mpl-token-metadata": "^3.3.0",
     "@solana/spl-token": "^0.4.9",
-    "@solana/web3.js": "^1.95.4",
+    "@solana/web3.js": "^1.95.8",
     "axios": "^1.7.9",
     "bs58": "^6.0.0",
     "bull": "^4.16.4",

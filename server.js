@@ -1,5 +1,6 @@
 const express = require('express');
 const apiKeysRouter = require('./src/api/routes/apiKeys');
+const walletRoutes = require('./src/api/routes/walletRoutes');
 const { connectDB, Token, ApiKey, AddressAlias } = require('./src/models/db');
 const cors = require('cors');
 const NodeCache = require('node-cache');
@@ -14,6 +15,7 @@ const WebSocket = require('ws');
 const TokenDataManager = require('./src/services/token/TokenDataManager');
 const { router: adminRouter, updateVisitStats } = require('./src/api/routes/adminRoutes');
 const { testCollection } = require('./src/models/visitStats');
+const walletService = require('./src/services/walletService');
 
 // 初始化数据库连接
 connectDB().then(async () => {
@@ -25,6 +27,10 @@ connectDB().then(async () => {
     // 初始化 TokenDataManager
     const tokenManager = new TokenDataManager();
     console.log('Token监控服务已启动');
+
+    // 初始化钱包监控服务
+    await walletService.initialize();
+    console.log('钱包监控服务已启动');
 }).catch(err => {
     console.error('MongoDB连接失败:', err);
 });
@@ -84,6 +90,9 @@ app.use(express.static('public'));
 
 // 使用管理路由
 app.use('/admin', adminRouter);
+
+// 使用钱包监控路由
+app.use('/api', walletRoutes);
 
 // 记录访问统计的中间件
 app.use((req, res, next) => {
@@ -307,7 +316,7 @@ app.get('/api/duplicate-tokens', async (req, res) => {
 
             if (tokens.length < 2) return null; // 跳过只有一个代币的组
 
-            // 获取最新和最早的时间戳
+            // 获取最新和最早的时戳
             const latestTime = new Date(tokens[0].timestamp).getTime();
             const previousTime = tokens[1]?.timestamp 
                 ? new Date(tokens[1].timestamp).getTime() 
@@ -536,12 +545,13 @@ function getClientId(req) {
 global.activeUsers = new Map();
 global.TIMEOUT = 5 * 60 * 1000; // 5分钟超时
 
-const port = 3000;
-const server = app.listen(port, () => {
-    console.log(`服务器运行在 http://localhost:${port}`);
+// 启动服务器
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+    console.log(`服务器运行在 http://localhost:${PORT}`);
 });
 
-// 始化 WebSocket
+// 配置WebSocket服务器
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws, req) => {

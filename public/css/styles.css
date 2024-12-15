@@ -36,11 +36,13 @@
 
 /* 复制成功提示动画 */
 .slide-fade-enter-active {
-    transition: all 0.3s ease;
+    transition: all 0.3s ease-out;
 }
+
 .slide-fade-leave-active {
-    transition: all 0.3s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+    transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
 }
+
 .slide-fade-enter-from,
 .slide-fade-leave-to {
     transform: translateY(-20px);
@@ -48,7 +50,37 @@
 }
 
 .message-popup {
-    animation: fadeInDown 0.3s ease-out;
+    position: relative;
+    z-index: 9999;
+    display: inline-flex;
+    align-items: center;
+    margin-top: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* 确保消息提示在其他元素之上 */
+.message-popup {
+    z-index: 9999;
+}
+
+/* 添加弹性动画效果 */
+@keyframes messagePopIn {
+    0% {
+        transform: scale(0.9) translateY(-20px);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.02) translateY(0);
+    }
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.message-popup {
+    animation: messagePopIn 0.3s ease-out forwards;
 }
 
 @keyframes fadeInDown {

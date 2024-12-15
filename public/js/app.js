@@ -1,6 +1,6 @@
 const { createApp } = Vue;
 
-createApp({
+const app = createApp({
     data() {
         return {
             tokens: [],
@@ -21,7 +21,10 @@ createApp({
             duplicateGroupTokens: [],
             selectedGroupSymbol: '',
             showCopyMessage: false,
-            copyMessageTimer: null,
+            showActionMessage: false,
+            actionMessage: '',
+            actionMessageType: 'success', // 'success' 或 'error'
+            messageTimer: null,
             newLabel: {
                 twitterUrl: '',
                 label: '',
@@ -60,7 +63,7 @@ createApp({
             duplicatePolling: null,
             duplicateSearchPage: 1,
             duplicateSearchTotalPages: 1,
-            onlineUsers: 20,
+            onlineUsers: 0,
             onlineUsersPolling: null,
             addressAliases: new Map(), // 存储地址别名映射
             showAliasModal: false,
@@ -107,7 +110,43 @@ createApp({
             devPollingInterval: 5000, // 5秒轮询一次
             lastDevUpdate: null,
             previousDevTokens: [], // 用于比较新旧数据
-            heartbeatInterval: null, // 用于心跳检测
+            
+            // 钱包监控相关数据
+            wallets: [],
+            currentWalletAddress: null,
+            walletStats: {
+                totalTransactions: 0,
+                buyCount: 0,
+                sellCount: 0,
+                totalSolAmount: 0
+            },
+            transactions: [],
+            totalPages: 1,
+            
+            // 模态框控制
+            showAddWalletModal: false,
+            showEditWalletModal: false,
+            showTransactionDetailsModal: false,
+            
+            // 表单数据
+            newWallet: {
+                address: '',
+                name: '',
+                monitorBuy: true,
+                monitorSell: true
+            },
+            editingWallet: {
+                walletAddress: '',
+                walletName: '',
+                monitorBuy: true,
+                monitorSell: true
+            },
+            selectedTransaction: null,
+            walletAddressExists: false,
+            existingWalletName: '',
+            walletSoundEnabled: true, // 添加钱包监控声音开关
+            walletNotificationSound: new Audio('/sounds/wallet.mp3'), // 添加钱包监控声音
+            previousTransactions: [], // 用于比较新旧交易数据
         }
     },
     methods: {
@@ -137,7 +176,7 @@ createApp({
         
         handleImageError(event, token) {
             event.target.style.display = 'none';  // 隐藏失败的图片
-            event.target.onerror = null;  // 防止无限循环
+            event.target.onerror = null;  // 防止无限循��
         },
         
         checkTwitterLink(link) {
@@ -173,7 +212,7 @@ createApp({
         getDuplicateTypeText(type) {
             const typeMap = {
                 'twitter_status': '推特链接重复',
-                'symbol_match': '代币符号重复',
+                'symbol_match': '代币符重��',
                 'name_match': '代币名称重复'
             };
             return typeMap[type] || '未知重复';
@@ -213,7 +252,7 @@ createApp({
 
         async fetchDuplicateTokens() {
             try {
-                // 如果正在查看特定组且不是强制刷新，则保持当前数据
+                // 如果正在查看特定组不是��制刷新，则保持当前数据
                 if (this.selectedDuplicateGroup && !arguments[0]) {
                     return;
                 }
@@ -223,7 +262,7 @@ createApp({
                     new Date(b.latestTime) - new Date(a.latestTime)
                 );
                 
-                // 只在没有选中特定组时更新数据
+                // 只没有选中特定组时更新数据
                 if (!this.selectedDuplicateGroup) {
                     this.duplicateTokens = newData;
                     this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
@@ -254,7 +293,7 @@ createApp({
                     _t: Date.now()
                 };
                 
-                // 如果有选中的重复组，并且当前在重复标签页
+                // 如果有选中的重复组，并且前在重复标签页
                 if (this.selectedDuplicateGroup && this.activeTab === 'duplicates') {
                     params.groupNumber = this.selectedDuplicateGroup;
                 } else if (this.activeTab === 'duplicates') {
@@ -510,12 +549,12 @@ createApp({
             try {
                 const response = await axios.get(`/api/tokens?page=${this.currentPage}&duplicatesOnly=${this.activeTab === 'duplicates'}`);
                 this.tokens = response.data.tokens;
-                this.total = response.data.total;  // 确保设置总数
+                this.total = response.data.total;  // 确保设置数
                 this.pages = response.data.pages;
                 this.lastUpdate = this.formatTime(new Date());  // 更新时间
             } catch (error) {
                 console.error('获取数据失败:', error);
-                this.error = '获取数据失败，请稍后重试';
+                this.error = '获取数据失败，请后重试';
             }
             
             // 恢复滚动位置
@@ -683,7 +722,7 @@ createApp({
                     }
                 }
                 
-                // 清除之前的定时器
+                // 清除之前的时器
                 if (this.copyMessageTimer) {
                     clearTimeout(this.copyMessageTimer);
                 }
@@ -820,14 +859,14 @@ createApp({
             }
         },
 
-        // 修改显示编辑别名的方法
+        // 修改显示编辑别名的法
         showEditAlias(address) {
             console.log('尝试编辑地址:', address); // 添加日志
             console.log('当前别名Map:', this.addressAliases); // 添加日志
             
             // 如果有别名，则不允许编辑
             if (this.addressAliases.has(address)) {
-                console.log('该地址已有别名，不允许编辑'); // 添加日
+                console.log('该地址已有别名，不允许编辑'); // 添加日志
                 return;
             }
             
@@ -838,7 +877,7 @@ createApp({
             console.log('显示编辑模态框'); // 添加日志
         },
 
-        // 修改地址显示的方法
+        // 修改地址显示方法
         formatOwnerDisplay(token) {
             const address = token.signer;  // 改为使用 signer
             const alias = this.addressAliases.get(address);
@@ -864,7 +903,7 @@ createApp({
                 await this.fetchAddressAliases();
                 await this.fetchDevTokens();
                 
-                // 重置状态
+                // 重置状���
                 this.showAliasModal = false;
                 this.currentEditAddress = null;
                 this.aliasInput = '';
@@ -873,7 +912,7 @@ createApp({
             }
         },
 
-        // 获取显示文本（别名或地址
+        // 获取显示文本（别名或地址）
         getDisplayAddress(address) {
             return this.addressAliases.get(address) || this.formatShortAddress(address);
         },
@@ -907,7 +946,7 @@ createApp({
                 this.previousDevTokens = newTokens;
                 this.lastDevUpdate = new Date();
             } catch (error) {
-                console.error('获取Dev��币失败:', error);
+                console.error('获取Dev币失败:', error);
             }
         },
 
@@ -1077,7 +1116,7 @@ createApp({
                 );
 
                 if (cachedData) {
-                    console.log('使用缓��数据');
+                    console.log('使用缓数据');
                     this.tokens = cachedData.tokens;
                     this.totalTokens = cachedData.total;
                     return;
@@ -1264,7 +1303,454 @@ createApp({
         // 添加新方法用于重复次数的显示
         formatDuplicateCount(count) {
             return `<span class="text-blue-500">${count}</span>`;
-        }
+        },
+
+        // 钱包相关��法
+        async loadWallets() {
+            try {
+                console.log('正在获取钱包列表...');
+                const response = await axios.get('/api/wallets');
+                console.log('获取钱包列表响应:', response.data);
+                
+                if (response.data.success) {
+                    this.wallets = response.data.data || [];
+                    // 如果当前选中的钱包不在列表中，重置为 'all'
+                    if (this.currentWalletAddress && 
+                        this.currentWalletAddress !== 'all' && 
+                        !this.wallets.find(w => w.walletAddress === this.currentWalletAddress)) {
+                        this.currentWalletAddress = 'all';
+                    }
+                } else {
+                    throw new Error(response.data.message || '获取钱包列表失败');
+                }
+            } catch (error) {
+                console.error('获取钱包列表失败:', error);
+                let errorMessage = '获取钱包列表失败: ';
+                if (error.response) {
+                    errorMessage += error.response.data?.message || error.response.statusText;
+                } else if (error.request) {
+                    errorMessage += '无法连接到服务器';
+                } else {
+                    errorMessage += error.message;
+                }
+                this.showMessage(errorMessage, 'error');
+            }
+        },
+
+        async selectWallet(address) {
+            this.currentWalletAddress = address;
+            this.currentPage = 1;
+            await this.loadWalletDetails();
+        },
+
+        async loadWalletDetails() {
+            try {
+                if (this.currentWalletAddress === 'all') {
+                    await this.loadAllTransactions();
+                } else {
+                    await Promise.all([
+                        this.loadWalletStats(),
+                        this.loadWalletTransactions()
+                    ]);
+                }
+
+                // 检查是否有新交易
+                if (this.previousTransactions.length > 0) {
+                    const newTransactions = this.transactions.filter(tx => 
+                        !this.previousTransactions.some(pt => pt.signature === tx.signature)
+                    );
+
+                    // 如果有新交易且声音开启，播放提示音
+                    if (newTransactions.length > 0 && this.walletSoundEnabled) {
+                        this.playWalletNotification();
+                        // 显示桌面通知
+                        this.showWalletNotification(`发现 ${newTransactions.length} 笔新交易`);
+                    }
+                }
+
+                // 更新previousTransactions
+                this.previousTransactions = [...this.transactions];
+            } catch (error) {
+                console.error('加载钱包详情失败:', error);
+                this.showMessage('加载钱包详情失败', 'error');
+            }
+        },
+
+        async loadWalletStats() {
+            try {
+                const response = await axios.get(`/api/wallets/${this.currentWalletAddress}/stats`);
+                this.walletStats = response.data.data;
+            } catch (error) {
+                console.error('加载钱包统计信息失败:', error);
+                this.$message.error('加载钱包统计信息失败');
+            }
+        },
+
+        async loadWalletTransactions() {
+            try {
+                const response = await axios.get(
+                    `/api/wallets/${this.currentWalletAddress}/transactions`,
+                    {
+                        params: {
+                            page: this.currentPage,
+                            limit: this.pageSize
+                        }
+                    }
+                );
+                this.transactions = response.data.data.transactions;
+                this.totalPages = Math.ceil(response.data.data.total / this.pageSize);
+            } catch (error) {
+                console.error('加载钱包交易记录失败:', error);
+                this.$message.error('加载钱包交易记录失败');
+            }
+        },
+
+        async loadAllTransactions() {
+            try {
+                const response = await axios.get('/api/wallets/transactions', {
+                    params: {
+                        page: this.currentPage,
+                        limit: this.pageSize
+                    }
+                });
+                this.transactions = response.data.data.transactions;
+                this.totalPages = Math.ceil(response.data.data.total / this.pageSize);
+            } catch (error) {
+                console.error('加载所有交易记录失败:', error);
+                this.$message.error('加载所有交易记录失败');
+            }
+        },
+
+        async addWallet() {
+            // 表单验证
+            if (!this.newWallet.address || !this.newWallet.name) {
+                this.showMessage('请填写完整的钱包信息', 'error');
+                return;
+            }
+
+            if (this.walletAddressExists) {
+                this.showMessage('该钱包地址已存在', 'error');
+                return;
+            }
+
+            try {
+                // 构建请求数据
+                const walletData = {
+                    walletAddress: this.newWallet.address,
+                    walletName: this.newWallet.name,
+                    monitorBuy: this.newWallet.monitorBuy,
+                    monitorSell: this.newWallet.monitorSell
+                };
+
+                console.log('正在添加钱包:', walletData);
+
+                const response = await axios.post('/api/wallets', walletData);
+                
+                console.log('添加钱包响应:', response.data);
+
+                if (response.data.success) {
+                    // 添加成功后更新钱包列表
+                    await this.fetchWallets();
+                    
+                    // 关闭模态框
+                    this.showAddWalletModal = false;
+                    
+                    // 重置表单
+                    this.newWallet = {
+                        address: '',
+                        name: '',
+                        monitorBuy: true,
+                        monitorSell: true
+                    };
+                    this.walletAddressExists = false;
+                    this.existingWalletName = '';
+                    
+                    // 显示成功消息
+                    this.showMessage('添加钱包成功');
+                } else {
+                    throw new Error(response.data.message || '添加钱包失败');
+                }
+            } catch (error) {
+                console.error('添加钱包时出错:', error);
+                
+                // 显示详细错误信息
+                let errorMessage = '添加钱包失败，钱包地址已存在: ';
+                if (error.response) {
+                    // 服务器响应的错误
+                    errorMessage += error.response.data?.message || error.response.statusText;
+                    console.error('服务器响应:', error.response);
+                } else if (error.request) {
+                    // 请求发送失败
+                    errorMessage += '无法连接到服务器';
+                    console.error('请求错误:', error.request);
+                } else {
+                    // 其他错误
+                    errorMessage += error.message;
+                }
+                
+                this.showMessage(errorMessage, 'error');
+            }
+        },
+
+        showEditWalletModal(wallet) {
+            console.log('准备编辑钱包:', wallet);
+            // 深拷贝钱包数据
+            this.editingWallet = {
+                walletAddress: wallet.walletAddress,
+                walletName: wallet.walletName,
+                monitorBuy: wallet.monitorBuy ?? true,
+                monitorSell: wallet.monitorSell ?? true
+            };
+            // 显示模态框
+            this.showEditWalletModal = true;
+        },
+
+        openEditWalletModal(wallet) {
+            console.log('打开编辑钱包模态框:', wallet);
+            this.editingWallet = {
+                walletAddress: wallet.walletAddress,
+                walletName: wallet.walletName,
+                monitorBuy: wallet.monitorBuy ?? true,
+                monitorSell: wallet.monitorSell ?? true
+            };
+            this.showEditWalletModal = true;
+        },
+
+        closeEditWalletModal() {
+            this.showEditWalletModal = false;
+            this.editingWallet = {
+                walletAddress: '',
+                walletName: '',
+                monitorBuy: true,
+                monitorSell: true
+            };
+        },
+
+        async updateWallet() {
+            try {
+                if (!this.editingWallet.walletAddress || !this.editingWallet.walletName) {
+                    this.showMessage('请填写完整的钱包信息', 'error');
+                    return;
+                }
+
+                console.log('正在更新钱包:', this.editingWallet);
+                const response = await axios.put(`/api/wallets/${this.editingWallet.walletAddress}`, {
+                    walletName: this.editingWallet.walletName,
+                    monitorBuy: this.editingWallet.monitorBuy,
+                    monitorSell: this.editingWallet.monitorSell
+                });
+
+                console.log('更新钱包响应:', response.data);
+
+                if (response.data.success) {
+                    // 更新成功后刷新钱包列表
+                    await this.loadWallets();
+                    
+                    // 如果当前正在查看这个钱包的详情，也更新详情
+                    if (this.currentWalletAddress === this.editingWallet.walletAddress) {
+                        await this.loadWalletDetails();
+                    }
+                    
+                    // 关闭模态框
+                    this.closeEditWalletModal();
+                    
+                    // 显示成功消息
+                    this.showMessage('更新钱包成功', 'success');
+                } else {
+                    throw new Error(response.data.message || '更新钱包失败');
+                }
+            } catch (error) {
+                console.error('更新钱包失败:', error);
+                let errorMessage = '更新钱包失败: ';
+                if (error.response) {
+                    errorMessage += error.response.data?.message || error.response.statusText;
+                } else if (error.request) {
+                    errorMessage += '无法连接到服务器';
+                } else {
+                    errorMessage += error.message;
+                }
+                this.showMessage(errorMessage, 'error');
+            }
+        },
+
+        async deleteWallet(address) {
+            if (!confirm('确定要删除这个钱包吗？')) {
+                return;
+            }
+
+            try {
+                console.log('正在删除钱包:', address);
+                const response = await axios.delete(`/api/wallets/${address}`);
+                
+                if (response.data.success) {
+                    // 显示成功消息
+                    this.showMessage('删除钱包成功', 'success');
+                    
+                    // 如果当前正在查看被删除的钱包，切换到全部视图
+                    if (this.currentWalletAddress === address) {
+                        this.currentWalletAddress = 'all';
+                    }
+                    
+                    // 立即重新加载钱包列表
+                    await this.loadWallets();
+                    
+                    // 重新加载交易记录
+                    await this.loadWalletDetails();
+                } else {
+                    throw new Error(response.data.message || '删除钱包失败');
+                }
+            } catch (error) {
+                console.error('删除钱包失败:', error);
+                let errorMessage = '删除钱包失败: ';
+                if (error.response) {
+                    errorMessage += error.response.data?.message || error.response.statusText;
+                } else if (error.request) {
+                    errorMessage += '无法连接到服务器';
+                } else {
+                    errorMessage += error.message;
+                }
+                this.showMessage(errorMessage, 'error');
+            }
+        },
+
+        showTransactionDetails(transaction) {
+            this.selectedTransaction = transaction;
+            this.showTransactionDetailsModal = true;
+        },
+
+        getWalletName(address) {
+            const wallet = this.wallets.find(w => w.walletAddress === address);
+            return wallet ? wallet.walletName : '未命名钱包';
+        },
+
+        handlePageChange(page) {
+            if (page >= 1 && page <= this.totalPages) {
+                this.currentPage = page;
+                this.loadWalletDetails();
+            }
+        },
+
+        // 工具方法
+        formatAddress(address) {
+            if (!address) return '';
+            return `${address.slice(0, 4)}...${address.slice(-4)}`;
+        },
+
+        formatTime(timestamp) {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+        },
+
+        // 检查钱包址是否已存在
+        async checkWalletAddress() {
+            if (!this.newWallet.address) {
+                this.walletAddressExists = false;
+                this.existingWalletName = '';
+                return;
+            }
+            
+            try {
+                console.log('检查钱包地址:', this.newWallet.address);
+                const response = await axios.get(`/api/wallets/check/${this.newWallet.address}`);
+                console.log('检查钱包响应:', response.data);
+                
+                this.walletAddressExists = response.data.exists;
+                this.existingWalletName = response.data.walletName || '';
+                
+                if (response.data.error) {
+                    throw new Error(response.data.error);
+                }
+            } catch (error) {
+                console.error('检查钱包地址时出错:', error);
+                // 不显示错误提示，只在控制台记录
+                this.walletAddressExists = false;
+                this.existingWalletName = '';
+            }
+        },
+
+        // 获取钱包列表的方法
+        async fetchWallets() {
+            try {
+                console.log('正在获取钱包列表...');
+                const response = await axios.get('/api/wallets');
+                console.log('获取钱包列表响应:', response.data);
+                
+                if (response.data.success) {
+                    this.wallets = response.data.data || [];
+                    
+                    // 如果当前选中的钱包不在列表中，重置为 'all'
+                    if (this.currentWalletAddress && 
+                        this.currentWalletAddress !== 'all' && 
+                        !this.wallets.find(w => w.walletAddress === this.currentWalletAddress)) {
+                        this.currentWalletAddress = 'all';
+                    }
+                    
+                    // 更新完列表后，如果有当前选中的钱包，重新加载其详情
+                    if (this.currentWalletAddress) {
+                        await this.loadWalletDetails();
+                    }
+                } else {
+                    throw new Error(response.data.message || '获取钱包列表失败');
+                }
+            } catch (error) {
+                console.error('获取钱包列表失败:', error);
+                let errorMessage = '获取钱包列表失败: ';
+                if (error.response) {
+                    errorMessage += error.response.data?.message || error.response.statusText;
+                } else if (error.request) {
+                    errorMessage += '无法连接到服务器';
+                } else {
+                    errorMessage += error.message;
+                }
+                this.showMessage(errorMessage, 'error');
+            }
+        },
+
+        // 添加新的提示方法
+        showMessage(message, type = 'success') {
+            // 清除可能存在的定时器
+            if (this.messageTimer) {
+                clearTimeout(this.messageTimer);
+            }
+            
+            this.actionMessage = message;
+            this.actionMessageType = type;
+            this.showActionMessage = true;
+            
+            // 3秒后自动隐藏
+            this.messageTimer = setTimeout(() => {
+                this.showActionMessage = false;
+            }, 3000);
+        },
+
+        // 添加钱包声音提示方法
+        playWalletNotification() {
+            if (this.walletSoundEnabled && this.walletNotificationSound) {
+                this.walletNotificationSound.currentTime = 0;
+                this.walletNotificationSound.play().catch(error => {
+                    console.error('播放钱包提示音失败:', error);
+                });
+            }
+        },
+
+        // 添加钱包桌面通知方法
+        showWalletNotification(message) {
+            if (Notification.permission === 'granted') {
+                new Notification('钱包交易提醒', {
+                    body: message,
+                    icon: '/favicon.ico'
+                });
+            }
+        },
     },
     mounted() {
         // 初始化数据
@@ -1286,7 +1772,7 @@ createApp({
             }
         }, this.updateInterval);
         
-        // WebSocket连���
+        // WebSocket连接
         this.connectWebSocket();
         
         // 其他初始化
@@ -1294,6 +1780,19 @@ createApp({
         if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
             Notification.requestPermission();
         }
+        
+        // 初始化钱包监�� - 设置默认显示全部交易
+        this.currentWalletAddress = 'all';
+        this.loadWallets().then(() => {
+            this.loadAllTransactions();  // 加载全部交易记录
+        });
+        
+        // 定时刷新当前钱包数据
+        setInterval(() => {
+            if (this.currentWalletAddress) {
+                this.loadWalletDetails();
+            }
+        }, 5000);
     },
     beforeUnmount() {
         if (this.refreshInterval) {
@@ -1391,7 +1890,7 @@ createApp({
                 end = this.labelPages;
             }
             
-            // 添加第一页
+            // 添加第一
             if (start > 1) {
                 range.push(1);
                 if (start > 2) range.push('...');
@@ -1451,7 +1950,7 @@ createApp({
             return this.isSearchActive ? this.searchResults : this.tokens;
         },
         displayedDuplicateTokens() {
-            // 先获取要显示的数据源（搜索结果或全数据）
+            // 先获取要显示的数据源（搜索果或全数据）
             let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
             
             // 按照 latestTime 降序排序，这样最的会在最前面
@@ -1468,7 +1967,7 @@ createApp({
             
             return data.slice(start, end);
         },
-        // 计算当前使用的页码
+        // 计算前使用的页码
         currentDuplicatePage() {
             return this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
         },
@@ -1540,7 +2039,7 @@ createApp({
             return Math.ceil(this.devTokens.length / this.devPageSize);
         },
         
-        // 当前页显示的数据
+        // 当前页显示数据
         displayedDevTokens() {
             const start = (this.devCurrentPage - 1) * this.devPageSize;
             const end = start + this.devPageSize;
@@ -1593,11 +2092,14 @@ createApp({
         }
     },
     watch: {
-        // 监听模态框显示状态，每次打开时刷新列表
+        // 监听态显示状态，每次打开时刷新列表
         showDevListModal(newVal) {
             if (newVal) {
                 this.fetchDevList();
             }
         }
     }
-}).mount('#app'); 
+}).mount('#app');
+
+// 将 Vue 实例暴露到全局作用域
+window.app = app; 

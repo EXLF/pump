@@ -25,7 +25,7 @@
         <!-- 新增固定导航栏 -->
         <nav class="fixed top-0 left-0 right-0 bg-white shadow-sm z-50">
             <div class="container mx-auto px-4">
-                <div class="flex items-center justify-between h-16">
+                <div class="flex flex-wrap items-center justify-between h-auto py-2 lg:h-16">
                     <!-- Logo区域 -->
                     <div class="flex items-center space-x-3">
                         <div class="flex-shrink-0">
@@ -56,54 +56,56 @@
                         </div>
                     </div>
 
-                    <!-- 右侧工具栏 -->
-                    <div class="flex items-center space-x-4">
+                    <!-- 右侧工具栏 - 修改为响应式布局 -->
+                    <div class="flex flex-wrap items-center gap-4 mt-2 lg:mt-0">
                         <!-- 在线人数 -->
-                        <span class="text-lg text-gray-500">
+                        <span class="text-base lg:text-lg text-gray-500 whitespace-nowrap">
                             <span class="mr-1">当前在线:</span>
                             <span class="font-medium">{{ onlineUsers }}</span>
                         </span>
 
                         <!-- 打狗机器人按钮区域 -->
-                        <div class="flex items-center space-x-4">
-                            <!-- 提示文本和机器人按钮组 -->
-                            <div class="flex flex-col">
-
-                                <!-- 机器人按钮 -->
-                                <div class="flex items-center space-x-2">
-                                    <a href="https://t.me/pepeboost_sol07_bot?start=ref_0d8l4n"
-                                        class="inline-flex items-center px-4 py-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors text-sm">
-                                        <img src="./images/pepe-icon.png" class="w-4 h-4 mr-2" alt="Pepe Bot">
-                                        Pepe Bot
-                                    </a>
-                                    <a href="https://t.me/dogeebot_bot?start=invite-17330534430421"
-                                        style="background-color: #f97316;"
-                                        class="inline-flex items-center px-4 py-1.5 text-white rounded-full hover:bg-orange-600 transition-colors text-sm">
-                                        <img src="./images/dogee-icon.png" class="w-4 h-4 mr-2" alt="Dogee Bot">
-                                        Dogee Bot
-                                    </a>
-                                </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- 机器人按钮组 -->
+                            <div class="flex items-center gap-2">
+                                <a href="https://t.me/pepeboost_sol07_bot?start=ref_0d8l4n"
+                                    class="inline-flex items-center px-3 py-1 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors text-sm whitespace-nowrap">
+                                    <img src="./images/pepe-icon.png" class="w-4 h-4 mr-1" alt="Pepe Bot">
+                                    Pepe Bot
+                                </a>
+                                <a href="https://t.me/dogeebot_bot?start=invite-17330534430421"
+                                    style="background-color: #f97316;"
+                                    class="inline-flex items-center px-3 py-1 text-white rounded-full hover:bg-orange-600 transition-colors text-sm whitespace-nowrap">
+                                    <img src="./images/dogee-icon.png" class="w-4 h-4 mr-1" alt="Dogee Bot">
+                                    Dogee Bot
+                                </a>
                             </div>
 
-                            <!-- TG群按钮 -->
+                            <!-- TG群按钮 - 在小屏幕隐藏 -->
                             <a href="https://t.me/+XTLZdJ4vVU83Nzk9" target="_blank"
-                                class="inline-flex items-center px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors text-sm">
-                                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                                    <path
-                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
+                                class="hidden lg:inline-flex items-center px-3 py-1 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors text-sm whitespace-nowrap">
+                                <svg class="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z" />
                                 </svg>
                                 加入TG群
                             </a>
-                            <!-- 帮助文档按钮 -->
+                            <!-- 帮助文档按钮 - 在小屏幕隐藏 -->
                             <a href="https://www.yuque.com/yixiao-vmumk/hec3ny/se9uy3iwfu43u26z?singleDoc# 《新手扫链教程》"
                                 target="_blank"
-                                class="inline-flex items-center px-4 py-1.5 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors text-sm">
-                                <svg class="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                                    <path
-                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v2h-2zm0 4h2v6h-2z" />
+                                class="hidden lg:inline-flex items-center px-3 py-1 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 transition-colors text-sm whitespace-nowrap">
+                                <svg class="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v2h-2zm0 4h2v6h-2z" />
                                 </svg>
                                 新手扫链教程
                             </a>
+                            <!-- 支持作者按钮 - 在小屏幕隐藏 -->
+                            <button @click="showDonateModal = true"
+                                class="hidden lg:inline-flex items-center px-3 py-1 bg-white text-gray-700 rounded-full hover:bg-gray-100 transition-colors text-sm whitespace-nowrap border border-gray-300">
+                                <svg class="w-4 h-4 mr-1 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
+                                </svg>
+                                支持作者
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -111,23 +113,46 @@
         </nav>
 
         <!-- 为固定导航栏添加间距 -->
-        <div class="pt-16">
-            <div class="container mx-auto px-4 py-8">
-                <div class="fixed inset-x-0 top-0 flex justify-center z-50">
-                    <transition name="slide-fade">
-                        <div v-if="showCopyMessage" class="message-popup mt-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
-                            <div class="flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                <span>复制成功</span>
-                            </div>
+        <div class="pt-24 lg:pt-20">
+            <!-- 复制成功提示 -->
+            <div class="fixed inset-x-0 top-24 lg:top-20 flex justify-center z-50">
+                <!-- 复制成功提示 -->
+                <transition name="slide-fade">
+                    <div v-if="showCopyMessage" class="message-popup mt-2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <span>复制成功</span>
                         </div>
-                    </transition>
-                </div>
+                    </div>
+                </transition>
 
-                <!-- 调整为左右布局 -->
-                <div class="flex gap-8">
+                <!-- 新增操作提示 -->
+                <transition name="slide-fade">
+                    <div v-if="showActionMessage" 
+                        class="message-popup mt-2 px-6 py-3 rounded-lg shadow-lg"
+                        :class="{
+                            'bg-green-500 text-white': actionMessageType === 'success',
+                            'bg-red-500 text-white': actionMessageType === 'error'
+                        }">
+                        <div class="flex items-center">
+                            <svg v-if="actionMessageType === 'success'" class="w-5 h-5 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            <svg v-else class="w-5 h-5 mr-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>{{ actionMessage }}</span>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+
+            <!-- 主要内容区域 - 调整内边距 -->
+            <div class="px-4 py-4">
+                <!-- 调整为左右布局，添加响应式类 -->
+                <div class="flex flex-col lg:flex-row gap-8">
                     <!-- 左侧主要代币列表 -->
                     <div class="flex-1 min-w-0">
                         <!-- 标签页 -->
@@ -165,8 +190,7 @@
                                 <button @click="clearSearch" v-if="isSearchActive"
                                     class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M6 18L18 6M6 6l12 12"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
                                 </button>
                             </div>
@@ -309,7 +333,8 @@
                                                         <div class="flex items-center space-x-1">
                                                             <!-- GMGN 按钮 -->
                                                             <a :href="'https://gmgn.ai/sol/token/' + token.mint"
-                                                                target="_blank" class="action-button"
+                                                                target="_blank" 
+                                                                class="inline-flex items-center justify-center w-5 h-5 min-w-[20px] min-h-[20px] rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
                                                                 title="在 GMGN 中查看">
                                                                 <img src="/images/gmgn.png" alt="GMGN"
                                                                     class="w-4 h-4 rounded-full"
@@ -318,7 +343,8 @@
 
                                                             <!-- 推特搜索按钮 -->
                                                             <a :href="'https://x.com/search?q=' + token.mint"
-                                                                target="_blank" class="action-button twitter-search"
+                                                                target="_blank" 
+                                                                class="inline-flex items-center justify-center w-5 h-5 min-w-[20px] min-h-[20px] rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
                                                                 title="在 Twitter 中搜索">
                                                                 <img src="/images/x.png" alt="X" class="w-4 h-4">
                                                             </a>
@@ -520,11 +546,10 @@
                                         <span class="text-xs text-gray-600 mr-2">启用声音提示</span>
                                         <button @click="soundEnabled = !soundEnabled"
                                             class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out"
-                                            :class="soundEnabled ? 'bg-blue-600' : 'bg-gray-200'">
+                                            :class="{'bg-blue-600': soundEnabled, 'bg-gray-200': !soundEnabled}">
                                             <span class="sr-only">启用声音提示</span>
-                                            <span
-                                                class="translate-x-0 inline-block w-5 h-5 transform bg-white rounded-full transition-transform duration-200 ease-in-out"
-                                                :class="soundEnabled ? 'translate-x-5' : 'translate-x-1'"></span>
+                                            <span class="translate-x-0 inline-block w-5 h-5 transform bg-white rounded-full transition-transform duration-200 ease-in-out"
+                                                :class="{'translate-x-5': soundEnabled, 'translate-x-1': !soundEnabled}"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -541,7 +566,7 @@
                                                     代币/地址</th>
                                                 <th
                                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    创建者（DEV）</th>
+                                                    创者（DEV）</th>
                                                 <th
                                                     class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     时间</th>
@@ -581,7 +606,7 @@
                                                                 <!-- GMGN 按钮 -->
                                                                 <a :href="'https://gmgn.ai/sol/token/' + token.mint"
                                                                     target="_blank"
-                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                                                                    class="inline-flex items-center justify-center w-5 h-5 min-w-[20px] min-h-[20px] rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
                                                                     title="在 GMGN 中查看">
                                                                     <img src="/images/gmgn.png" alt="GMGN"
                                                                         class="w-4 h-4 rounded-full"
@@ -591,7 +616,7 @@
                                                                 <!-- 添加推特搜索按钮 -->
                                                                 <a :href="'https://x.com/search?q=' + token.mint"
                                                                     target="_blank"
-                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
+                                                                    class="inline-flex items-center justify-center w-5 h-5 min-w-[20px] min-h-[20px] rounded-full bg-blue-100 hover:bg-blue-200 transition-colors"
                                                                     title="在 Twitter 中搜索">
                                                                     <img src="/images/x.png" alt="X" class="w-4 h-4">
                                                                 </a>
@@ -707,7 +732,7 @@
 
                                     <!-- 分页按钮 -->
                                     <div class="flex space-x-2">
-                                        <!-- 上一页 -->
+                                        <!-- 一页 -->
                                         <button @click="handleDevPageChange(devCurrentPage - 1)"
                                             :disabled="devCurrentPage === 1" class="px-3 py-1 rounded text-sm"
                                             :class="devCurrentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
@@ -779,9 +804,9 @@
                         </div>
                     </div>
 
-                    <!-- 右侧重复代币监控 -->
-                    <div class="w-80 flex-shrink-0">
-                        <div class="bg-white rounded-lg shadow p-4 sticky top-20 mb-4">
+                    <!-- 右侧重复代币监控，修改响应式布局 -->
+                    <div class="w-full lg:w-80 flex-shrink-0">
+                        <div class="bg-white rounded-lg shadow p-4 lg:sticky lg:top-20">
                             <div class="flex justify-between items-center mb-4">
                                 <h2 class="text-lg font-semibold">重复代币监控</h2>
                                 <span class="text-xs text-gray-500">
@@ -875,7 +900,7 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
-                                            <span class="font-medium">首次出现：</span>
+                                            <span class="font-medium">次出现：</span>
                                             <span class="ml-1">{{ formatTime(group.firstTime) }}</span>
                                         </div>
                                     </div>
@@ -933,6 +958,211 @@
                                         :class="(isDuplicateSearchActive ? duplicateSearchPage === duplicateSearchTotalPages : duplicateCurrentPage === duplicateTotalPages) ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
                                         下一页
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 钱包监控列表 - 添加外边距和内边距 -->
+                <div class="mt-8">
+                    <div class="bg-white rounded-lg shadow">
+                        <div class="p-6">
+                            <!-- 在钱包监控标题旁边添加声音开关 -->
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-lg font-medium text-gray-900">钱包监控</h3>
+                                <div class="flex items-center space-x-2">
+                                    <!-- 添加声音开关 -->
+                                    <div class="flex items-center mr-4">
+                                        <span class="text-xs text-gray-600 mr-2">启用声音提示</span>
+                                        <button @click="walletSoundEnabled = !walletSoundEnabled" 
+                                            class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out"
+                                            :class="{'bg-blue-600': walletSoundEnabled, 'bg-gray-200': !walletSoundEnabled}">
+                                            <span class="sr-only">启用声音提示</span>
+                                            <span class="translate-x-0 inline-block w-5 h-5 transform bg-white rounded-full transition-transform duration-200 ease-in-out"
+                                                :class="{'translate-x-5': walletSoundEnabled, 'translate-x-1': !walletSoundEnabled}"></span>
+                                        </button>
+                                    </div>
+                                    <!-- 添加钱包按钮 -->
+                                    <button @click="showAddWalletModal = true"
+                                        class="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700">
+                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        添加钱包
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 钱包监控内容 -->
+                            <div class="flex gap-6">
+                                <!-- 左侧钱包列表 -->
+                                <div class="w-64 flex-shrink-0">
+                                    <div class="bg-gray-50 rounded-lg p-3">
+                                        <div id="walletList" class="space-y-2">
+                                            <!-- 全部交易选项 -->
+                                            <div class="cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                                :class="{'bg-blue-50': currentWalletAddress === 'all'}"
+                                                @click="selectWallet('all')">
+                                                <h6 class="text-sm font-medium">全部交易</h6>
+                                                <small class="text-xs text-gray-500">显示所有钱包的交易记录</small>
+                                            </div>
+                                            <!-- 单个钱包项 -->
+                                            <div v-for="wallet in wallets" :key="wallet.walletAddress"
+                                                class="cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                                                :class="{'bg-blue-50': currentWalletAddress === wallet.walletAddress}"
+                                                @click="selectWallet(wallet.walletAddress)">
+                                                <div class="flex justify-between items-center">
+                                                    <div>
+                                                        <h6 class="text-sm font-medium">{{ wallet.walletName }}</h6>
+                                                        <small class="text-xs text-gray-500">{{ formatAddress(wallet.walletAddress) }}</small>
+                                                    </div>
+                                                    <div class="flex space-x-1">
+                                                        <!-- 将编辑按钮的点击事件从 showEditWalletModal 改为 openEditWalletModal -->
+                                                        <button @click.stop="openEditWalletModal(wallet)"
+                                                            class="p-1 text-gray-500 hover:text-blue-600">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                            </svg>
+                                                        </button>
+                                                        <button @click.stop="deleteWallet(wallet.walletAddress)"
+                                                            class="p-1 text-gray-500 hover:text-red-600">
+                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 右侧交易记录 -->
+                                <div class="flex-1">
+                                    <!-- 统计卡片 -->
+                                    <div v-if="currentWalletAddress && currentWalletAddress !== 'all'"
+                                        class="grid grid-cols-4 gap-4 mb-4">
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <div class="text-sm text-gray-500">总交易次数</div>
+                                            <div class="text-xl font-semibold mt-1">{{ walletStats.totalTransactions }}</div>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <div class="text-sm text-gray-500">买入次数</div>
+                                            <div class="text-xl font-semibold mt-1 text-green-600">{{ walletStats.buyCount }}</div>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <div class="text-sm text-gray-500">卖出次数</div>
+                                            <div class="text-xl font-semibold mt-1 text-red-600">{{ walletStats.sellCount }}</div>
+                                        </div>
+                                        <div class="bg-gray-50 rounded-lg p-4">
+                                            <div class="text-sm text-gray-500">总SOL金额</div>
+                                            <div class="text-xl font-semibold mt-1">{{ walletStats.totalSolAmount.toFixed(4) }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- 交易记录表格 -->
+                                    <div class="overflow-x-auto">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th scope="col"
+                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        钱包名称</th>
+                                                    <th scope="col"
+                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        时间</th>
+                                                    <th scope="col"
+                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        代币</th>
+                                                    <th scope="col"
+                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        方向</th>
+                                                    <th scope="col"
+                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        数量</th>
+                                                    <th scope="col"
+                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        SOL金额</th>
+                                                    <th scope="col"
+                                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        状态</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200">
+                                                <tr v-for="tx in transactions" :key="tx.signature" class="hover:bg-gray-50 cursor-pointer"
+                                                    @click="showTransactionDetails(tx)">
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="text-sm font-medium text-gray-900">{{ getWalletName(tx.walletAddress) }}</div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="text-sm text-gray-500">{{ formatTime(tx.timestamp) }}</div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <div class="text-sm font-medium text-gray-900">{{ tx.tokenSymbol }}</div>
+                                                        <div class="text-xs text-gray-500">{{ formatAddress(tx.tokenAddress) }}</div>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span :class="[
+                                                            'px-2 py-1 text-xs font-medium rounded-full',
+                                                            tx.direction === '买入' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                        ]">
+                                                            {{ tx.direction }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {{ tx.amount.toFixed(4) }}
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {{ Math.abs(tx.solAmount).toFixed(4) }}
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span :class="[
+                                                            'px-2 py-1 text-xs font-medium rounded-full',
+                                                            tx.status === '成功' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                        ]">
+                                                            {{ tx.status }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- 分页控件 -->
+                                    <div class="mt-4 flex justify-between items-center">
+                                        <div class="text-sm text-gray-500">
+                                            第 {{ currentPage }} 页，共 {{ totalPages }} 页
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <button @click="handlePageChange(currentPage - 1)" :disabled="currentPage === 1"
+                                                class="px-3 py-1 rounded text-sm"
+                                                :class="currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                                上一页
+                                            </button>
+                                            <button v-for="p in paginationRange" :key="p"
+                                                @click="p !== '...' && handlePageChange(p)"
+                                                :class="[
+                                                    'px-3 py-1 rounded text-sm min-w-[32px]',
+                                                    {
+                                                        'bg-blue-500 text-white': currentPage === p,
+                                                        'bg-white text-blue-500 hover:bg-blue-100': currentPage !== p && p !== '...',
+                                                        'bg-gray-100 text-gray-600 cursor-default': p === '...'
+                                                    }
+                                                ]"
+                                                :disabled="p === '...'">
+                                                {{ p }}
+                                            </button>
+                                            <button @click="handlePageChange(currentPage + 1)"
+                                                :disabled="currentPage === totalPages"
+                                                class="px-3 py-1 rounded text-sm"
+                                                :class="currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-500 hover:bg-blue-100'">
+                                                下一页
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1075,14 +1305,14 @@
         </button> -->
 
         <!-- 右侧打赏按钮 -->
-        <button @click="showDonateModal = true"
+        <!-- <button @click="showDonateModal = true"
             class="fixed right-4 bottom-4 inline-flex items-center px-4 py-2 text-base font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-lg border border-gray-300 shadow-md transition-all hover:shadow-lg">
             <svg class="w-5 h-5 mr-2 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                 <path
                     d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />
             </svg>
             支持作者
-        </button>
+        </button> -->
 
         <!-- 打赏模态框 -->
         <div v-if="showDonateModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1127,6 +1357,201 @@
             </div>
         </div>
 
+        <!-- 添加钱包模态框 -->
+        <div v-if="showAddWalletModal"
+            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">添加监控钱包</h3>
+                    <button @click="showAddWalletModal = false" class="text-gray-400 hover:text-gray-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">钱包地址</label>
+                        <input type="text" v-model="newWallet.address" @input="checkWalletAddress"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <p v-if="walletAddressExists" class="mt-1 text-sm text-red-600">
+                            该钱包地址已存在，名称为：{{ existingWalletName }}
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">钱包名称</label>
+                        <input type="text" v-model="newWallet.name"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" v-model="newWallet.monitorBuy"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">监控买入</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" v-model="newWallet.monitorSell"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">监控卖出</span>
+                        </label>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button @click="showAddWalletModal = false"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            取消
+                        </button>
+                        <button @click="addWallet" :disabled="walletAddressExists"
+                            class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white"
+                            :class="walletAddressExists ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'">
+                            确认添加
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 编辑钱包模态框 -->
+        <div v-if="showEditWalletModal"
+            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">编辑钱包</h3>
+                    <button @click="closeEditWalletModal" class="text-gray-400 hover:text-gray-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">钱包名称</label>
+                        <input type="text" v-model="editingWallet.walletName"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center">
+                            <input type="checkbox" v-model="editingWallet.monitorBuy"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">监控买入</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" v-model="editingWallet.monitorSell"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span class="ml-2 text-sm text-gray-700">监控卖出</span>
+                        </label>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button @click="closeEditWalletModal"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            取消
+                        </button>
+                        <button @click="updateWallet"
+                            class="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                            确认修改
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 交易详情模态框 -->
+        <div v-if="showTransactionDetailsModal"
+            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">交易详情</h3>
+                    <button @click="showTransactionDetailsModal = false"
+                        class="text-gray-400 hover:text-gray-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">钱包名称</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ getWalletName(selectedTransaction?.walletAddress) }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">钱包地址</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ selectedTransaction?.walletAddress }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">交易时间</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ formatTime(selectedTransaction?.timestamp) }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">代币符号</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ selectedTransaction?.tokenSymbol }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">代币名称</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ selectedTransaction?.tokenName }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">代币地址</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ selectedTransaction?.tokenAddress }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">交易方向</label>
+                            <div class="mt-1">
+                                <span :class="[
+                                    'px-2 py-1 text-xs font-medium rounded-full',
+                                    selectedTransaction?.direction === '买入' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                ]">
+                                    {{ selectedTransaction?.direction }}
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">交易数量</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ selectedTransaction?.amount.toFixed(4) }}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">SOL数量</label>
+                            <div class="mt-1 text-sm text-gray-900">
+                                {{ Math.abs(selectedTransaction?.solAmount).toFixed(4) }} SOL
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">交易状态</label>
+                            <div class="mt-1">
+                                <span :class="[
+                                    'px-2 py-1 text-xs font-medium rounded-full',
+                                    selectedTransaction?.status === '成功' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                ]">
+                                    {{ selectedTransaction?.status }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">交易签名</label>
+                            <div class="mt-1 text-sm text-gray-900 break-all">
+                                {{ selectedTransaction?.signature }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/js/app.js"></script>
@@ -1138,10 +1563,9 @@
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === 'onlineCount') {
-                    // 更新导航栏中的在线人数显示
-                    const onlineCountElement = document.querySelector('.text-lg.text-gray-500 .font-medium');
-                    if (onlineCountElement) {
-                        onlineCountElement.textContent = data.data;
+                    // 通过 Vue 的响应式系统更新在线人数
+                    if (window.app) {
+                        window.app.onlineUsers = data.data;
                     }
                 }
             } catch (error) {
