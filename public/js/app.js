@@ -23,49 +23,23 @@ const app = createApp({
             showCopyMessage: false,
             showActionMessage: false,
             actionMessage: '',
-            actionMessageType: 'success', // 'success' 或 'error'
+            actionMessageType: 'success',
             messageTimer: null,
-            newLabel: {
-                twitterUrl: '',
-                label: '',
-                color: '#3B82F6' // 默认蓝色
-            },
-            showLabelForm: false,
-            lastScrollPosition: 0,  // 添加这个来记录滚动位置
+            lastScrollPosition: 0,
             polling: null,
-            isUserScrolling: false,  // 添加用户滚动状态标记
+            isUserScrolling: false,
             lastUpdateTime: 0,
-            imageCache: new Map(), // 用于缓存头像
-            updateInterval: 3000,  // 更新为3秒
-            minUpdateInterval: 2000,  // 最小更新间隔
-            maxUpdateInterval: 5000,  // 最大更新间隔
-            lastDataChange: null,  // 上次数据变化时间
-            consecutiveNoChanges: 0,  // 连续无变化次数
-            importStatus: {
-                show: false,
-                message: '',
-                error: false
-            },
-            showLabelList: false, // 控制标签列表显示/隐藏
-            labelPage: 1,
-            labelPages: 1,
-            labelTotal: 0,
-            scrollPosition: 0,
-            searchQuery: '',
-            searchResults: [],
-            searchTotal: 0,
-            searchPages: 1,
-            searchCurrentPage: 1,
-            isSearchActive: false,
-            duplicateSearchQuery: '',
-            isDuplicateSearchActive: false,
-            duplicateSearchResults: [],
-            duplicatePolling: null,
-            duplicateSearchPage: 1,
-            duplicateSearchTotalPages: 1,
+            imageCache: new Map(),
+            updateInterval: 3000,
+            minUpdateInterval: 2000,
+            maxUpdateInterval: 5000,
+            lastDataChange: null,
+            consecutiveNoChanges: 0,
             onlineUsers: 0,
             onlineUsersPolling: null,
-            addressAliases: new Map(), // 存储地址别名映射
+            addressAliases: new Map(),
+            addressAliasesLastUpdate: 0,
+            addressAliasesUpdateInterval: 6000,
             showAliasModal: false,
             currentEditAddress: null,
             aliasInput: '',
@@ -83,9 +57,9 @@ const app = createApp({
             showDevListModal: false,
             devList: [],
             devSearchQuery: '',
-            notificationSound: new Audio('/sounds/dev.mp3'), // 添加音频对象
-            previousDevCount: 0, // 用于跟踪上一次的 dev 数量
-            soundEnabled: true, // 添加声音开关状态
+            notificationSound: new Audio('/sounds/dev.mp3'),
+            previousDevCount: 0,
+            soundEnabled: true,
             showDonateModal: false,
             currentDonateMethod: 'wechat',
             donateMethods: [
@@ -104,14 +78,9 @@ const app = createApp({
             isCacheEnabled: true,
             lastCacheUpdate: null,
             websocket: null,
-            addressAliases: new Map(),
-            addressAliasesLastUpdate: 0,
-            addressAliasesUpdateInterval: 6000, // 6秒更新一次
-            devPollingInterval: 5000, // 5秒轮询一次
+            devPollingInterval: 5000,
             lastDevUpdate: null,
-            previousDevTokens: [], // 用于比较新旧数据
-            
-            // 钱包监控相关数据
+            previousDevTokens: [],
             wallets: [],
             currentWalletAddress: null,
             walletStats: {
@@ -122,13 +91,9 @@ const app = createApp({
             },
             transactions: [],
             totalPages: 1,
-            
-            // 模态框控制
             showAddWalletModal: false,
             showEditWalletModal: false,
             showTransactionDetailsModal: false,
-            
-            // 表单数据
             newWallet: {
                 address: '',
                 name: '',
@@ -144,9 +109,13 @@ const app = createApp({
             selectedTransaction: null,
             walletAddressExists: false,
             existingWalletName: '',
-            walletSoundEnabled: true, // 添加钱包监控声音开关
-            walletNotificationSound: new Audio('/sounds/wallet.mp3'), // 添加钱包监控声音
-            previousTransactions: [], // 用于比较新旧交易数据
+            walletSoundEnabled: true,
+            walletNotificationSound: new Audio('/sounds/wallet.mp3'),
+            previousTransactions: [],
+            walletListPage: 1,
+            walletListPageSize: 10,
+            walletListPages: 1,
+            allWallets: []
         }
     },
     methods: {
@@ -176,7 +145,7 @@ const app = createApp({
         
         handleImageError(event, token) {
             event.target.style.display = 'none';  // 隐藏失败的图片
-            event.target.onerror = null;  // 防止无限循��
+            event.target.onerror = null;  // 防止无限循
         },
         
         checkTwitterLink(link) {
@@ -212,8 +181,8 @@ const app = createApp({
         getDuplicateTypeText(type) {
             const typeMap = {
                 'twitter_status': '推特链接重复',
-                'symbol_match': '代币符重��',
-                'name_match': '代币名称重复'
+                'symbol_match': '代币符重',
+                'name_match': '代币名称重'
             };
             return typeMap[type] || '未知重复';
         },
@@ -252,7 +221,7 @@ const app = createApp({
 
         async fetchDuplicateTokens() {
             try {
-                // 如果正在查看特定组不是��制刷新，则保持当前数据
+                // 如果正在查询特定组不是制刷新，则保持当前数据
                 if (this.selectedDuplicateGroup && !arguments[0]) {
                     return;
                 }
@@ -553,8 +522,8 @@ const app = createApp({
                 this.pages = response.data.pages;
                 this.lastUpdate = this.formatTime(new Date());  // 更新时间
             } catch (error) {
-                console.error('获取数据失败:', error);
-                this.error = '获取数据失败，请后重试';
+                console.error('获取据失败:', error);
+                this.error = '获数据失败，请后重试';
             }
             
             // 恢复滚动位置
@@ -630,7 +599,7 @@ const app = createApp({
             this.startPolling();
         },
 
-        // 搜索复代币
+        // 搜索复币
         async searchDuplicateTokens() {
             if (!this.duplicateSearchQuery.trim()) {
                 return;
@@ -668,7 +637,7 @@ const app = createApp({
 
         // 添加重复组数据的轮询方法
         startDuplicatePolling() {
-            this.fetchDuplicateTokens(); // 立即获取次数据
+            this.fetchDuplicateTokens(); // 立即获取次数
             this.duplicatePolling = setInterval(() => {
                 if (!this.isDuplicateSearchActive) {  // 只在非搜索态下更新
                     this.fetchDuplicateTokens();
@@ -903,7 +872,7 @@ const app = createApp({
                 await this.fetchAddressAliases();
                 await this.fetchDevTokens();
                 
-                // 重置状���
+                // 重置状
                 this.showAliasModal = false;
                 this.currentEditAddress = null;
                 this.aliasInput = '';
@@ -938,7 +907,7 @@ const app = createApp({
                     if (newDevTokens.length > 0 && this.soundEnabled) {
                         this.playNotification();
                         // 可以加桌面通知
-                        this.showNotification(`发现 ${newDevTokens.length} 个新的 Dev 代币`);
+                        this.showNotification(`发现 ${newDevTokens.length} 个新的 Dev 币`);
                     }
                 }
                 
@@ -997,7 +966,7 @@ const app = createApp({
                 
             } catch (error) {
                 console.error('添加 Dev 失败:', error);
-                this.devAddError = '添加失败，请稍后重试';
+                this.devAddError = '添加失败，稍后重试';
             }
         },
 
@@ -1173,7 +1142,7 @@ const app = createApp({
         // 动态调整更新间隔
         adjustUpdateInterval(hasChanged) {
             if (hasChanged) {
-                // 如果数据有变化，减少更新间隔
+                // 如果据变化，减少更新间隔
                 this.updateInterval = Math.max(
                     this.minUpdateInterval,
                     this.updateInterval - 500
@@ -1305,36 +1274,71 @@ const app = createApp({
             return `<span class="text-blue-500">${count}</span>`;
         },
 
-        // 钱包相关��法
+        // 钱包相关法
         async loadWallets() {
             try {
-                console.log('正在获取钱包列表...');
                 const response = await axios.get('/api/wallets');
-                console.log('获取钱包列表响应:', response.data);
-                
                 if (response.data.success) {
-                    this.wallets = response.data.data || [];
-                    // 如果当前选中的钱包不在列表中，重置为 'all'
-                    if (this.currentWalletAddress && 
-                        this.currentWalletAddress !== 'all' && 
-                        !this.wallets.find(w => w.walletAddress === this.currentWalletAddress)) {
-                        this.currentWalletAddress = 'all';
-                    }
-                } else {
-                    throw new Error(response.data.message || '获取钱包列表失败');
+                    this.allWallets = response.data.data || [];
+                    this.walletListPages = Math.ceil(this.allWallets.length / this.walletListPageSize);
+                    this.updateDisplayedWallets();
                 }
             } catch (error) {
                 console.error('获取钱包列表失败:', error);
-                let errorMessage = '获取钱包列表失败: ';
-                if (error.response) {
-                    errorMessage += error.response.data?.message || error.response.statusText;
-                } else if (error.request) {
-                    errorMessage += '无法连接到服务器';
-                } else {
-                    errorMessage += error.message;
-                }
-                this.showMessage(errorMessage, 'error');
+                this.showMessage('获取钱包列表失败', 'error');
             }
+        },
+
+        updateDisplayedWallets() {
+            const start = (this.walletListPage - 1) * this.walletListPageSize;
+            const end = start + this.walletListPageSize;
+            this.wallets = this.allWallets.slice(start, end);
+        },
+
+        handleWalletListPageChange(page) {
+            if (typeof page === 'number' && page >= 1 && page <= this.walletListPages) {
+                this.walletListPage = page;
+                this.updateDisplayedWallets();
+            }
+        },
+
+        // 计算钱包列表分页范围
+        walletListPaginationRange() {
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = this.walletListPage - leftOffset;
+            let end = this.walletListPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), this.walletListPages);
+                start = 1;
+            }
+            
+            if (end > this.walletListPages) {
+                start = Math.max(start - (end - this.walletListPages), 1);
+                end = this.walletListPages;
+            }
+            
+            // 添加第一页
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            // 添加中间页码
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            // 添加最后一页
+            if (end < this.walletListPages) {
+                if (end < this.walletListPages - 1) range.push('...');
+                range.push(this.walletListPages);
+            }
+            
+            return range;
         },
 
         async selectWallet(address) {
@@ -1360,7 +1364,7 @@ const app = createApp({
                         !this.previousTransactions.some(pt => pt.signature === tx.signature)
                     );
 
-                    // 如果有新交易且声音开启，播放提示音
+                    // 果有新交易且声音开启，播放提示音
                     if (newTransactions.length > 0 && this.walletSoundEnabled) {
                         this.playWalletNotification();
                         // 显示桌面通知
@@ -1446,7 +1450,7 @@ const app = createApp({
 
                 const response = await axios.post('/api/wallets', walletData);
                 
-                console.log('添加钱包响应:', response.data);
+                console.log('加钱包响应:', response.data);
 
                 if (response.data.success) {
                     // 添加成功后更新钱包列表
@@ -1529,7 +1533,7 @@ const app = createApp({
         async updateWallet() {
             try {
                 if (!this.editingWallet.walletAddress || !this.editingWallet.walletName) {
-                    this.showMessage('请填写完整的钱包信息', 'error');
+                    this.showMessage('请填写整的钱包信息', 'error');
                     return;
                 }
 
@@ -1707,7 +1711,7 @@ const app = createApp({
                 if (error.response) {
                     errorMessage += error.response.data?.message || error.response.statusText;
                 } else if (error.request) {
-                    errorMessage += '无法连接到服务器';
+                    errorMessage += '无法连���到服务器';
                 } else {
                     errorMessage += error.message;
                 }
@@ -1751,6 +1755,19 @@ const app = createApp({
                 });
             }
         },
+
+        handleWalletListPageChange(page) {
+            if (page >= 1 && page <= this.walletListPages) {
+                this.walletListPage = page;
+                this.updateDisplayedWallets();
+            }
+        },
+
+        updateDisplayedWallets() {
+            const start = (this.walletListPage - 1) * this.walletListPageSize;
+            const end = start + this.walletListPageSize;
+            this.wallets = this.allWallets.slice(start, end);
+        }
     },
     mounted() {
         // 初始化数据
@@ -1781,13 +1798,13 @@ const app = createApp({
             Notification.requestPermission();
         }
         
-        // 初始化钱包监�� - 设置默认显示全部交易
+        // 初始化钱包监 - 设置默认显示全部交易
         this.currentWalletAddress = 'all';
         this.loadWallets().then(() => {
             this.loadAllTransactions();  // 加载全部交易记录
         });
         
-        // 定时刷新当前钱包数据
+        // 定时刷新当前钱数据
         setInterval(() => {
             if (this.currentWalletAddress) {
                 this.loadWalletDetails();
@@ -1818,42 +1835,23 @@ const app = createApp({
         sessionStorage.setItem('scrollPosition', window.scrollY.toString());
     },
     computed: {
+        // 基本分页
         paginationRange() {
             const range = [];
-            for (let i = 1; i <= this.pages; i++) {
-                if (i === 1 || i === this.pages || 
-                    (i >= this.currentPage - 2 && i <= this.currentPage + 2)) {
-                    range.push(i);
-                } else if (range[range.length - 1] !== '...') {
-                    range.push('...');
-                }
-            }
-            return range;
-        },
-        paginatedDuplicateTokens() {
-            const start = (this.duplicateCurrentPage - 1) * this.duplicatePageSize;
-            const end = start + this.duplicatePageSize;
-            return this.duplicateTokens.slice(start, end);
-        },
-        duplicatePaginationRange() {
-            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
-            const totalPages = this.isDuplicateSearchActive ? this.duplicateSearchTotalPages : this.duplicateTotalPages;
-            
-            const range = [];
             const maxButtons = 5;
             const leftOffset = Math.floor(maxButtons / 2);
             
-            let start = currentPage - leftOffset;
-            let end = currentPage + leftOffset;
+            let start = this.currentPage - leftOffset;
+            let end = this.currentPage + leftOffset;
             
             if (start < 1) {
-                end = Math.min(end + (1 - start), totalPages);
+                end = Math.min(end + (1 - start), this.pages);
                 start = 1;
             }
             
-            if (end > totalPages) {
-                start = Math.max(start - (end - totalPages), 1);
-                end = totalPages;
+            if (end > this.pages) {
+                start = Math.max(start - (end - this.pages), 1);
+                end = this.pages;
             }
             
             if (start > 1) {
@@ -1865,167 +1863,20 @@ const app = createApp({
                 range.push(i);
             }
             
-            if (end < totalPages) {
-                if (end < totalPages - 1) range.push('...');
-                range.push(totalPages);
+            if (end < this.pages) {
+                if (end < this.pages - 1) range.push('...');
+                range.push(this.pages);
             }
             
             return range;
         },
-        labelPaginationRange() {
-            const range = [];
-            const maxButtons = 5;
-            const leftOffset = Math.floor(maxButtons / 2);
-            
-            let start = this.labelPage - leftOffset;
-            let end = this.labelPage + leftOffset;
-            
-            if (start < 1) {
-                end = Math.min(end + (1 - start), this.labelPages);
-                start = 1;
-            }
-            
-            if (end > this.labelPages) {
-                start = Math.max(start - (end - this.labelPages), 1);
-                end = this.labelPages;
-            }
-            
-            // 添加第一
-            if (start > 1) {
-                range.push(1);
-                if (start > 2) range.push('...');
-            }
-            
-            // 添加中间页码
-            for (let i = start; i <= end; i++) {
-                range.push(i);
-            }
-            
-            // 添加最后一页
-            if (end < this.labelPages) {
-                if (end < this.labelPages - 1) range.push('...');
-                range.push(this.labelPages);
-            }
-            
-            return range;
-        },
-        searchPaginationRange() {
-            const range = [];
-            const maxButtons = 5;
-            const leftOffset = Math.floor(maxButtons / 2);
-            
-            let start = this.searchCurrentPage - leftOffset;
-            let end = this.searchCurrentPage + leftOffset;
-            
-            if (start < 1) {
-                end = Math.min(end + (1 - start), this.searchPages);
-                start = 1;
-            }
-            
-            if (end > this.searchPages) {
-                start = Math.max(start - (end - this.searchPages), 1);
-                end = this.searchPages;
-            }
-            
-            // 添加第一页
-            if (start > 1) {
-                range.push(1);
-                if (start > 2) range.push('...');
-            }
-            
-            // 添加中间页码
-            for (let i = start; i <= end; i++) {
-                range.push(i);
-            }
-            
-            // 添加最后一页
-            if (end < this.searchPages) {
-                if (end < this.searchPages - 1) range.push('...');
-                range.push(this.searchPages);
-            }
-            
-            return range;
-        },
+        
+        // 显示的代币
         displayedTokens() {
             return this.isSearchActive ? this.searchResults : this.tokens;
         },
-        displayedDuplicateTokens() {
-            // 先获取要显示的数据源（搜索果或全数据）
-            let data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
-            
-            // 按照 latestTime 降序排序，这样最的会在最前面
-            data = [...data].sort((a, b) => new Date(b.latestTime) - new Date(a.latestTime));
-            
-            // 计算分页
-            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
-            const totalPages = Math.ceil(data.length / this.duplicatePageSize);
-            
-            // 从后往前计算码，这样最新的数据会在第一页
-            const reversePage = totalPages - currentPage + 1;
-            const start = (reversePage - 1) * this.duplicatePageSize;
-            const end = start + this.duplicatePageSize;
-            
-            return data.slice(start, end);
-        },
-        // 计算前使用的页码
-        currentDuplicatePage() {
-            return this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
-        },
-
-        // 计算总页数
-        duplicateTotalPages() {
-            const totalItems = this.isDuplicateSearchActive 
-                ? this.duplicateSearchResults.length 
-                : this.duplicateTokens.length;
-            return Math.max(1, Math.ceil(totalItems / this.duplicatePageSize));
-        },
-
-        // 计算搜索结果总页数
-        duplicateSearchTotalPages() {
-            const totalItems = this.duplicateSearchResults.length;
-            return Math.max(1, Math.ceil(totalItems / this.duplicatePageSize));
-        },
-
-        // 分页范围计算
-        duplicatePaginationRange() {
-            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
-            const totalPages = this.isDuplicateSearchActive ? this.duplicateSearchTotalPages : this.duplicateTotalPages;
-            
-            const range = [];
-            const maxButtons = 5;
-            const leftOffset = Math.floor(maxButtons / 2);
-            
-            let start = currentPage - leftOffset;
-            let end = currentPage + leftOffset;
-            
-            if (start < 1) {
-                end = Math.min(end + (1 - start), totalPages);
-                start = 1;
-            }
-            
-            if (end > totalPages) {
-                start = Math.max(start - (end - totalPages), 1);
-                end = totalPages;
-            }
-            
-            if (start > 1) {
-                range.push(1);
-                if (start > 2) range.push('...');
-            }
-            
-            for (let i = start; i <= end; i++) {
-                range.push(i);
-            }
-            
-            if (end < totalPages) {
-                if (end < totalPages - 1) range.push('...');
-                range.push(totalPages);
-            }
-            
-            return range;
-        },
-
-        // 显示的重复组数据
+        
+        // 重复代币分页
         displayedDuplicateTokens() {
             const data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
             const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
@@ -2033,20 +1884,65 @@ const app = createApp({
             const end = start + this.duplicatePageSize;
             return data.slice(start, end);
         },
-
-        // 计算总页数
+        
+        // 重复代币总页数
+        duplicateTotalPages() {
+            const totalItems = this.isDuplicateSearchActive 
+                ? this.duplicateSearchResults.length 
+                : this.duplicateTokens.length;
+            return Math.max(1, Math.ceil(totalItems / this.duplicatePageSize));
+        },
+        
+        // 重复代币分页范围
+        duplicatePaginationRange() {
+            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+            const totalPages = this.duplicateTotalPages;
+            
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = currentPage - leftOffset;
+            let end = currentPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), totalPages);
+                start = 1;
+            }
+            
+            if (end > totalPages) {
+                start = Math.max(start - (end - totalPages), 1);
+                end = totalPages;
+            }
+            
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            if (end < totalPages) {
+                if (end < totalPages - 1) range.push('...');
+                range.push(totalPages);
+            }
+            
+            return range;
+        },
+        
+        // Dev 代币相关计算属性
         devPages() {
             return Math.ceil(this.devTokens.length / this.devPageSize);
         },
         
-        // 当前页显示数据
         displayedDevTokens() {
             const start = (this.devCurrentPage - 1) * this.devPageSize;
             const end = start + this.devPageSize;
             return this.devTokens.slice(start, end);
         },
         
-        // 分页范围
         devPaginationRange() {
             const range = [];
             const maxButtons = 5;
@@ -2081,6 +1977,44 @@ const app = createApp({
             
             return range;
         },
+        
+        // 搜索相关计算属性
+        searchPaginationRange() {
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = this.searchCurrentPage - leftOffset;
+            let end = this.searchCurrentPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), this.searchPages);
+                start = 1;
+            }
+            
+            if (end > this.searchPages) {
+                start = Math.max(start - (end - this.searchPages), 1);
+                end = this.searchPages;
+            }
+            
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            if (end < this.searchPages) {
+                if (end < this.searchPages - 1) range.push('...');
+                range.push(this.searchPages);
+            }
+            
+            return range;
+        },
+        
+        // Dev 列表过滤
         filteredDevList() {
             if (!this.devSearchQuery) return this.devList;
             
@@ -2089,6 +2023,42 @@ const app = createApp({
                 dev.address.toLowerCase().includes(query) || 
                 dev.alias.toLowerCase().includes(query)
             );
+        },
+        
+        // 钱包列表分页范围
+        walletListPaginationRange() {
+            const range = [];
+            const maxButtons = 5;
+            const leftOffset = Math.floor(maxButtons / 2);
+            
+            let start = this.walletListPage - leftOffset;
+            let end = this.walletListPage + leftOffset;
+            
+            if (start < 1) {
+                end = Math.min(end + (1 - start), this.walletListPages);
+                start = 1;
+            }
+            
+            if (end > this.walletListPages) {
+                start = Math.max(start - (end - this.walletListPages), 1);
+                end = this.walletListPages;
+            }
+            
+            if (start > 1) {
+                range.push(1);
+                if (start > 2) range.push('...');
+            }
+            
+            for (let i = start; i <= end; i++) {
+                range.push(i);
+            }
+            
+            if (end < this.walletListPages) {
+                if (end < this.walletListPages - 1) range.push('...');
+                range.push(this.walletListPages);
+            }
+            
+            return range;
         }
     },
     watch: {
