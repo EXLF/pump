@@ -21,9 +21,9 @@ const RPC_CONFIG = {
 
 // 监控配置
 const MONITOR_CONFIG = {
-    pollInterval: 5000,  // 轮询间隔改为5秒
+    pollInterval: 5000,  // 轮询间隔为5秒
     maxRetries: 3,       // 最大重试次数
-    batchSize: 50        // 每批处理交易数增加到50
+    batchSize: 20        // 每批处理交易数改为20个
 };
 
 // 获取元数据账户地址
@@ -158,7 +158,7 @@ class WalletService {
             // 找到上次检查的位置
             const lastIndex = signatures.findIndex(sig => sig.signature === monitor.lastSignature);
             if (lastIndex === -1) {
-                // 如果找不到上次的签名，可能错过了一些���易，从最新的开始
+                // 如果找不到上次的签名，可能错过了一些交易，从最新的开始
                 monitor.lastSignature = signatures[0].signature;
                 console.log(`未找到上次的签名，从最新的开始: ${monitor.lastSignature}`);
                 return;
@@ -252,7 +252,7 @@ class WalletService {
             return null;
         }
 
-        console.log('开始分析代���变化...');
+        console.log('开始分析代币变化...');
         console.log('交易前余额:', JSON.stringify(tx.meta.preTokenBalances, null, 2));
         console.log('交易后余额:', JSON.stringify(tx.meta.postTokenBalances, null, 2));
 
