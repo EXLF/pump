@@ -16,6 +16,15 @@ const app = createApp({
             duplicateCurrentPage: 1,
             duplicatePageSize: 4,
             duplicateTotalPages: 1,
+            duplicateSearchTotalPages: 1,
+            searchQuery: '',
+            searchResults: [],
+            searchTotal: 0,
+            isSearchActive: false,
+            isDuplicateSearchActive: false,
+            duplicateSearchQuery: '',
+            duplicateSearchResults: [],
+            duplicateSearchPage: 1,
             activeTab: 'all',
             selectedDuplicateGroup: null,
             duplicateGroupTokens: [],
@@ -219,10 +228,10 @@ const app = createApp({
             this.fetchTokens();
         },
 
-        async fetchDuplicateTokens() {
+        async fetchDuplicateTokens(forceRefresh = false) {
             try {
-                // 如果正在查询特定组不是制刷新，则保持当前数据
-                if (this.selectedDuplicateGroup && !arguments[0]) {
+                // 如果正在查询特定组且不是强制刷新，则保持当前数据
+                if (this.selectedDuplicateGroup && !forceRefresh) {
                     return;
                 }
 
@@ -231,8 +240,8 @@ const app = createApp({
                     new Date(b.latestTime) - new Date(a.latestTime)
                 );
                 
-                // 只没有选中特定组时更新数据
-                if (!this.selectedDuplicateGroup) {
+                // 只在没有选中特定组或强制刷新时更新数据
+                if (!this.selectedDuplicateGroup || forceRefresh) {
                     this.duplicateTokens = newData;
                     this.duplicateTotalPages = Math.ceil(this.duplicateTokens.length / this.duplicatePageSize);
                     
@@ -278,7 +287,7 @@ const app = createApp({
                     }
                 });
                 
-                // 只有在以下情况才更新数据：
+                // 只有以下情况才更新数据：
                 // 1. 没有选中重复组
                 // 2. 不在重复标签页
                 // 3. 强制刷新
@@ -553,32 +562,22 @@ const app = createApp({
 
         async performSearch() {
             if (!this.searchQuery.trim()) {
+                this.clearSearch();
                 return;
             }
-
+            
             this.loading = true;
             this.error = null;
+            this.isSearchActive = true;
             
             try {
-                const response = await axios.get('/api/tokens/search', {
-                    params: {
-                        query: this.searchQuery.trim(),
-                        page: this.searchCurrentPage
-                    }
-                });
-
+                const response = await axios.get(`/api/tokens/search?q=${encodeURIComponent(this.searchQuery.trim())}`);
                 this.searchResults = response.data.tokens;
                 this.searchTotal = response.data.total;
-                this.searchPages = response.data.pages;
-                this.isSearchActive = true;
-
-                // 停止自动刷新
-                if (this.polling) {
-                    clearInterval(this.polling);
-                    this.polling = null;
-                }
+                this.duplicateSearchTotalPages = Math.ceil(this.searchTotal / this.pageSize);
             } catch (error) {
-                this.error = '搜索失败: ' + (error.response?.data?.error || error.message);
+                console.error('搜索失败:', error);
+                this.error = '搜索失败,请重试';
             } finally {
                 this.loading = false;
             }
@@ -586,22 +585,17 @@ const app = createApp({
 
         clearSearch() {
             this.searchQuery = '';
-            this.isSearchActive = false;
             this.searchResults = [];
             this.searchTotal = 0;
-            this.searchPages = 1;
-            this.searchCurrentPage = 1;
-            
-            // 恢复始数据显示
-            this.fetchTokens();
-            
-            // 恢复自动刷新
-            this.startPolling();
+            this.isSearchActive = false;
+            this.duplicateSearchTotalPages = 1;
+            this.fetchTokens(true);
         },
 
-        // 搜索复币
+        // 搜索重复代币
         async searchDuplicateTokens() {
             if (!this.duplicateSearchQuery.trim()) {
+                await this.clearDuplicateSearch();
                 return;
             }
 
@@ -613,11 +607,23 @@ const app = createApp({
                     }
                 });
                 
-                this.duplicateSearchResults = response.data.sort((a, b) => 
+                // 确保结果是数组
+                const results = Array.isArray(response.data) ? response.data : [];
+                
+                // 按时间排序
+                this.duplicateSearchResults = results.sort((a, b) => 
                     new Date(b.latestTime) - new Date(a.latestTime)
                 );
+                
+                // 设置搜索状态和分页
                 this.isDuplicateSearchActive = true;
                 this.duplicateSearchPage = 1;
+                this.duplicateSearchTotalPages = Math.ceil(this.duplicateSearchResults.length / this.duplicatePageSize);
+                
+                // 如果没有找到结果，显示提示
+                if (results.length === 0) {
+                    console.log('未找到匹配的重复代币组');
+                }
             } catch (error) {
                 console.error('搜索重复代币失败:', error);
             } finally {
@@ -625,14 +631,24 @@ const app = createApp({
             }
         },
 
-        // 清除搜索
+        // 清除重复代币搜索
         async clearDuplicateSearch() {
-            this.duplicateSearchQuery = '';
-            this.isDuplicateSearchActive = false;
-            this.duplicateSearchResults = [];
-            this.duplicateSearchPage = 1;
-            // 恢复轮询
-            this.startDuplicatePolling();
+            try {
+                this.loading = true;
+                // 清除搜索相关状态
+                this.duplicateSearchQuery = '';
+                this.isDuplicateSearchActive = false;
+                this.duplicateSearchResults = [];
+                this.duplicateSearchPage = 1;
+                this.duplicateSearchTotalPages = 1;
+
+                // 重新获取所有重复组数据
+                await this.fetchDuplicateTokens(true);
+            } catch (error) {
+                console.error('清除搜索并重新获取数据失败:', error);
+            } finally {
+                this.loading = false;
+            }
         },
 
         // 添加重复组数据的轮询方法
@@ -656,12 +672,13 @@ const app = createApp({
             }
         },
 
+        // 获取当前显示的重复代币列表
         displayedDuplicateTokens() {
-            const start = (this.duplicateCurrentPage - 1) * this.duplicatePageSize;
+            const data = this.isDuplicateSearchActive ? this.duplicateSearchResults : this.duplicateTokens;
+            const currentPage = this.isDuplicateSearchActive ? this.duplicateSearchPage : this.duplicateCurrentPage;
+            const start = (currentPage - 1) * this.duplicatePageSize;
             const end = start + this.duplicatePageSize;
-            
-            // 接使已排序数据
-            return this.duplicateTokens.slice(start, end);
+            return data.slice(start, end);
         },
 
         // 统一的复制方法
@@ -1148,7 +1165,7 @@ const app = createApp({
                     this.updateInterval - 500
                 );
             } else {
-                // 如果连续多次无变化，逐增加更新间隔
+                // 如果��续多次无变化，逐增加更新间隔
                 if (this.consecutiveNoChanges >= 3) {
                     this.updateInterval = Math.min(
                         this.maxUpdateInterval,
@@ -1220,7 +1237,7 @@ const app = createApp({
                         </a>
                         <button class="copy-button" onclick="copyToClipboard('${token.mint}')">复制</button>
                     </td>
-                    <!-- 暂时注释掉持人数显示
+                    <!-- 暂时注释掉持人数示
                     <td class="holders-count" onclick="app.updateHoldersCount('${token.mint}')" title="点击更新">
                         ${token.holdersCount || '0'}
                         <span class="update-icon">🔄</span>
@@ -1484,7 +1501,7 @@ const app = createApp({
                     errorMessage += error.response.data?.message || error.response.statusText;
                     console.error('服务器响应:', error.response);
                 } else if (error.request) {
-                    // 请求发送失败
+                    // 请���发送失败
                     errorMessage += '无法连接到服务器';
                     console.error('请求错误:', error.request);
                 } else {
@@ -1587,7 +1604,7 @@ const app = createApp({
                 const response = await axios.delete(`/api/wallets/${address}`);
                 
                 if (response.data.success) {
-                    // 显示成功消息
+                    // 显示成��消息
                     this.showMessage('删除钱包成功', 'success');
                     
                     // 如果当前正在查看被删除的钱包，切换到全部视图
@@ -1711,7 +1728,7 @@ const app = createApp({
                 if (error.response) {
                     errorMessage += error.response.data?.message || error.response.statusText;
                 } else if (error.request) {
-                    errorMessage += '无法连���到服务器';
+                    errorMessage += '无法连接到服务器';
                 } else {
                     errorMessage += error.message;
                 }
@@ -1781,7 +1798,7 @@ const app = createApp({
         // 修改自动刷新逻辑
         this.refreshInterval = setInterval(() => {
             if (!this.isSearchActive) {
-                // 只在没有选中特定重复组时进行自动刷新
+                // 只在没���选中特定重复组时进行自动刷新
                 if (!this.selectedDuplicateGroup || this.activeTab !== 'duplicates') {
                     this.fetchTokens();
                     this.fetchDuplicateTokens();

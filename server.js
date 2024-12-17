@@ -314,59 +314,65 @@ app.get('/api/duplicate-tokens', async (req, res) => {
             };
         }
 
-        // 获取匹配的重复组号
-        const matchingTokens = await Token.find(baseQuery).lean();
+        // 获取匹配的代币
+        const matchingTokens = await Token.find(baseQuery)
+            .sort({ timestamp: -1 })
+            .lean();
         
-        // 过滤掉只有一个代币的组
+        // 按重复组分组并统计
         const groupCounts = {};
-        matchingTokens.forEach(token => {
-            groupCounts[token.duplicateGroup] = (groupCounts[token.duplicateGroup] || 0) + 1;
-        });
+        const groupData = {};
         
+        matchingTokens.forEach(token => {
+            const group = token.duplicateGroup;
+            if (!groupCounts[group]) {
+                groupCounts[group] = 0;
+                groupData[group] = token;
+            }
+            groupCounts[group]++;
+        });
+
+        // 过滤出有效的重复组（至少有2个代币的组）
         const validGroups = Object.entries(groupCounts)
             .filter(([_, count]) => count > 1)
             .map(([group]) => parseInt(group));
 
-        // 只返回有多个代币的组
-        const duplicateGroups = validGroups;
-
-        const duplicateTokensInfo = await Promise.all(duplicateGroups.map(async (groupNumber) => {
+        // 获取每个有效组的详细信息
+        const duplicateTokensInfo = await Promise.all(validGroups.map(async (groupNumber) => {
             const tokens = await Token.find({ duplicateGroup: groupNumber })
                 .sort({ timestamp: -1 })
                 .lean();
 
-            if (tokens.length < 2) return null; // 跳过只有一个代币的组
+            if (tokens.length < 2) return null;
 
-            // 获取最新和最早的时戳
-            const latestTime = new Date(tokens[0].timestamp).getTime();
-            const previousTime = tokens[1]?.timestamp 
-                ? new Date(tokens[1].timestamp).getTime() 
-                : null;
-            const firstTime = new Date(tokens[tokens.length - 1].timestamp).getTime();
+            const latestTime = new Date(tokens[0].timestamp);
+            const previousTime = tokens[1] ? new Date(tokens[1].timestamp) : null;
+            const firstTime = new Date(tokens[tokens.length - 1].timestamp);
 
             // 检查是否有完整的推特链接
             const twitterToken = tokens.find(t => 
                 t.metadata?.twitter?.includes('twitter.com/') || 
                 t.metadata?.twitter?.includes('x.com/')
             );
-            const hasFullTwitterLink = !!twitterToken;
 
             return {
                 groupNumber,
                 type: tokens[0].duplicateType,
                 symbol: tokens[0].symbol,
                 metadata: tokens[0].metadata,
-                latestTime: new Date(latestTime),
-                previousTime: previousTime ? new Date(previousTime) : null,
-                firstTime: new Date(firstTime),
+                latestTime,
+                previousTime,
+                firstTime,
                 count: tokens.length,
-                hasFullTwitterLink,
+                hasFullTwitterLink: !!twitterToken,
                 twitterLink: twitterToken?.metadata?.twitter || null
             };
         }));
 
-        // 过滤掉空值并返回结果
-        const filteredResults = duplicateTokensInfo.filter(info => info !== null);
+        // 过滤掉空值并按最新时间排序
+        const filteredResults = duplicateTokensInfo
+            .filter(info => info !== null)
+            .sort((a, b) => b.latestTime - a.latestTime);
         
         res.json(filteredResults);
     } catch (error) {
@@ -423,7 +429,7 @@ app.use('/admin', express.static('public/admin'));
 // 新增搜索接口
 app.get('/api/tokens/search', async (req, res) => {
     try {
-        const { query } = req.query;
+        const query = req.query.q;  // 修改为使用 q 参数
         const page = parseInt(req.query.page) || 1;
         const limit = 9;
         const skip = (page - 1) * limit;
@@ -437,11 +443,11 @@ app.get('/api/tokens/search', async (req, res) => {
             });
         }
 
-        // 构建查询条件，忽略大小写
+        // 构建查询条件，使用包含匹配而不是精确匹配
         const searchQuery = {
             $or: [
-                { symbol: new RegExp(`^${query}$`, 'i') },  // 精确匹配符号，忽略小写
-                { mint: new RegExp(`^${query}$`, 'i') }     // 精确匹配地址，忽略大小写
+                { symbol: new RegExp(query, 'i') },  // 包含匹配符号，忽略大小写
+                { mint: new RegExp(query, 'i') }     // 包含匹配地址，忽略大小写
             ]
         };
 
