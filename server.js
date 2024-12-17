@@ -16,6 +16,7 @@ const TokenDataManager = require('./src/services/token/TokenDataManager');
 const { router: adminRouter, updateVisitStats } = require('./src/api/routes/adminRoutes');
 const { testCollection } = require('./src/models/visitStats');
 const walletService = require('./src/services/walletService');
+const cleanupTask = require('./src/tasks/cleanupTask');
 
 // 初始化数据库连接
 connectDB().then(async () => {
@@ -31,6 +32,26 @@ connectDB().then(async () => {
     // 初始化钱包监控服务
     await walletService.initialize();
     console.log('钱包监控服务已启动');
+
+    // 初始化清理任务
+    try {
+        await cleanupTask.start();
+        console.log('清理任务初始化成功');
+        
+        // 每小时检查一次任务状态
+        setInterval(async () => {
+            const status = cleanupTask.getStatus();
+            console.log('清理任务状态:', status);
+            
+            // 如果任务异常停止，尝试重新启动
+            if (!status.isRunning) {
+                console.log('检测到清理任务停止，尝试重新启动');
+                await cleanupTask.start();
+            }
+        }, 60 * 60 * 1000); // 每小时检查一次
+    } catch (error) {
+        console.error('清理任务初始化失败:', error);
+    }
 }).catch(err => {
     console.error('MongoDB连接失败:', err);
 });
@@ -544,6 +565,26 @@ function getClientId(req) {
 // 扩展用户连接信息存储
 global.activeUsers = new Map();
 global.TIMEOUT = 5 * 60 * 1000; // 5分钟超时
+
+// 获取清理任务状态的API
+app.get('/api/cleanup/status', async (req, res) => {
+    try {
+        const status = cleanupTask.getStatus();
+        const recentLogs = await cleanupTask.getCleanupLogs(5);
+        res.json({
+            success: true,
+            data: {
+                status,
+                recentLogs
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // 启动服务器
 const PORT = process.env.PORT || 3000;
